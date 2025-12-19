@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { MapPin, Loader2, Route } from 'lucide-react';
+import { MapPin, Loader2, Route, Map, Mountain, Satellite, Moon, Sun } from 'lucide-react';
 
 interface RouteMapProps {
   polyline?: string | null;
@@ -10,6 +10,35 @@ interface RouteMapProps {
   distance?: number;
   className?: string;
 }
+
+type MapStyle = 'dark' | 'satellite' | 'outdoor' | 'light';
+
+const MAP_STYLES: Record<MapStyle, { url: string; name: string; icon: typeof Moon; routeColor: string }> = {
+  dark: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    name: 'Dark',
+    icon: Moon,
+    routeColor: '#22d3ee',
+  },
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    name: 'Satellite',
+    icon: Satellite,
+    routeColor: '#fbbf24',
+  },
+  outdoor: {
+    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    name: 'Terrain',
+    icon: Mountain,
+    routeColor: '#ef4444',
+  },
+  light: {
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    name: 'Light',
+    icon: Sun,
+    routeColor: '#0891b2',
+  },
+};
 
 // Decode Google polyline format
 function decodePolyline(encoded: string): [number, number][] {
@@ -53,19 +82,26 @@ function decodePolyline(encoded: string): [number, number][] {
 export function RouteMap({ polyline, activityName, distance, className }: RouteMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const tileLayerRef = useRef<any>(null);
+  const routeLayerRef = useRef<any>(null);
+  const glowLayerRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
+  const [leafletModule, setLeafletModule] = useState<any>(null);
+  const pointsRef = useRef<[number, number][]>([]);
 
+  // Load Leaflet and initialize map
   useEffect(() => {
     if (!polyline || !mapRef.current) {
       setIsLoading(false);
       return;
     }
 
-    // Dynamically import Leaflet
     const loadMap = async () => {
       try {
         const L = (await import('leaflet')).default;
+        setLeafletModule(L);
 
         // Load Leaflet CSS dynamically
         if (!document.getElementById('leaflet-css')) {
@@ -118,6 +154,7 @@ export function RouteMap({ polyline, activityName, distance, className }: RouteM
         }
 
         const points = decodePolyline(polyline);
+        pointsRef.current = points;
 
         if (points.length === 0) {
           setError('No route data available');
@@ -138,25 +175,26 @@ export function RouteMap({ polyline, activityName, distance, className }: RouteM
 
         mapInstanceRef.current = map;
 
-        // Dark tile layer
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        // Add tile layer
+        const styleConfig = MAP_STYLES[mapStyle];
+        tileLayerRef.current = L.tileLayer(styleConfig.url, {
           maxZoom: 19,
         }).addTo(map);
 
-        // Create route polyline with gradient effect
-        const routeLine = L.polyline(points, {
-          color: '#22d3ee',
-          weight: 3,
-          opacity: 0.9,
+        // Add glow effect
+        glowLayerRef.current = L.polyline(points, {
+          color: styleConfig.routeColor,
+          weight: 8,
+          opacity: 0.2,
           lineCap: 'round',
           lineJoin: 'round',
         }).addTo(map);
 
-        // Add glow effect
-        L.polyline(points, {
-          color: '#22d3ee',
-          weight: 8,
-          opacity: 0.2,
+        // Create route polyline
+        routeLayerRef.current = L.polyline(points, {
+          color: styleConfig.routeColor,
+          weight: 3,
+          opacity: 0.9,
           lineCap: 'round',
           lineJoin: 'round',
         }).addTo(map);
@@ -181,7 +219,7 @@ export function RouteMap({ polyline, activityName, distance, className }: RouteM
         L.marker(points[points.length - 1], { icon: endIcon }).addTo(map);
 
         // Fit bounds with padding
-        map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+        map.fitBounds(routeLayerRef.current.getBounds(), { padding: [30, 30] });
 
         setIsLoading(false);
       } catch (err) {
@@ -201,6 +239,35 @@ export function RouteMap({ polyline, activityName, distance, className }: RouteM
     };
   }, [polyline]);
 
+  // Update tile layer when style changes
+  useEffect(() => {
+    if (!mapInstanceRef.current || !leafletModule || !tileLayerRef.current) return;
+
+    const L = leafletModule;
+    const styleConfig = MAP_STYLES[mapStyle];
+
+    // Remove old tile layer and add new one
+    mapInstanceRef.current.removeLayer(tileLayerRef.current);
+    tileLayerRef.current = L.tileLayer(styleConfig.url, {
+      maxZoom: 19,
+    }).addTo(mapInstanceRef.current);
+
+    // Update route colors
+    if (routeLayerRef.current) {
+      routeLayerRef.current.setStyle({ color: styleConfig.routeColor });
+    }
+    if (glowLayerRef.current) {
+      glowLayerRef.current.setStyle({ color: styleConfig.routeColor });
+    }
+  }, [mapStyle, leafletModule]);
+
+  const cycleMapStyle = () => {
+    const styles: MapStyle[] = ['dark', 'satellite', 'outdoor', 'light'];
+    const currentIndex = styles.indexOf(mapStyle);
+    const nextIndex = (currentIndex + 1) % styles.length;
+    setMapStyle(styles[nextIndex]);
+  };
+
   if (!polyline) {
     return (
       <GlassCard theme="slate" className={`p-4 ${className}`}>
@@ -217,6 +284,8 @@ export function RouteMap({ polyline, activityName, distance, className }: RouteM
     );
   }
 
+  const CurrentStyleIcon = MAP_STYLES[mapStyle].icon;
+
   return (
     <GlassCard theme="cyan" className={`p-4 ${className}`}>
       <div className="flex items-center justify-between mb-3">
@@ -226,11 +295,22 @@ export function RouteMap({ polyline, activityName, distance, className }: RouteM
             <p className="text-xs text-slate-400 truncate max-w-[200px]">{activityName}</p>
           )}
         </div>
-        {distance && (
-          <span className="text-xs text-cyan-400 font-medium">
-            {(distance / 1000).toFixed(1)} km
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Map style toggle */}
+          <button
+            onClick={cycleMapStyle}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-800/60 hover:bg-slate-700/60 transition-colors"
+            title={`Switch map style (${MAP_STYLES[mapStyle].name})`}
+          >
+            <CurrentStyleIcon className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="text-[10px] text-slate-400">{MAP_STYLES[mapStyle].name}</span>
+          </button>
+          {distance && (
+            <span className="text-xs text-cyan-400 font-medium">
+              {(distance / 1000).toFixed(1)} km
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="relative aspect-[16/10] rounded-lg overflow-hidden bg-slate-900" style={{ zIndex: 1 }}>
