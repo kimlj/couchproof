@@ -1,17 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import PageContainer from '@/components/layout/PageContainer';
 import { ActivityDetailModal } from '@/components/activities/ActivityDetailModal';
+import { WeeklyStatsRow } from '@/components/dashboard/WeeklyStatsRow';
+import { RouteMap } from '@/components/dashboard/RouteMap';
+import { StravaFeed } from '@/components/dashboard/StravaFeed';
+import { CalendarHeatmap } from '@/components/dashboard/CalendarHeatmap';
+import { AthleteStats } from '@/components/dashboard/AthleteStats';
 import { GlassCard, GlassIcon } from '@/components/ui/glass-card';
-import { Activity, Brain, Trophy, TrendingUp, Bike, Footprints, Loader2, Heart, Zap, Mountain } from 'lucide-react';
+import { Loader2, RefreshCw, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 
 type ActivityData = {
   id: string;
@@ -39,94 +38,75 @@ type ActivityData = {
   city?: string;
   state?: string;
   country?: string;
+  summaryPolyline?: string;
   gear?: { name: string; type: string };
 };
 
-type AthleteStats = {
+type AthleteStatsData = {
   recentRideCount: number;
   recentRunCount: number;
+  recentRideDistance: number;
+  recentRunDistance: number;
+  recentRideMovingTime: number;
+  recentRunMovingTime: number;
+  recentRideElevationGain: number;
+  recentRunElevationGain: number;
   ytdRideDistance: number;
   ytdRunDistance: number;
+  ytdRideElevationGain: number;
+  ytdRunElevationGain: number;
   allRideCount: number;
   allRunCount: number;
+  allRideDistance: number;
+  allRunDistance: number;
+  allRideElevationGain: number;
+  allRunElevationGain: number;
+  biggestRideDistance?: number;
+  biggestClimbElevationGain?: number;
+};
+
+type UserData = {
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  avatarUrl?: string;
+  sex?: string;
+  city?: string;
+  country?: string;
+  stravaFTP?: number;
+  stravaWeight?: number;
+  stravaFollowerCount?: number;
+  stravaFriendCount?: number;
+  stravaPremium?: boolean;
 };
 
 type StatsData = {
   activityCount: number;
-  athleteStats: AthleteStats | null;
+  athleteStats: AthleteStatsData | null;
+  stats?: {
+    totalDistance: number;
+    totalActivities: number;
+    totalElevation: number;
+    averageHeartRate?: number;
+    maxHeartRate?: number;
+  };
 };
-
-function formatDistance(meters: number): string {
-  const km = meters / 1000;
-  return km >= 1000 ? `${(km / 1000).toFixed(1)}k km` : `${km.toFixed(1)} km`;
-}
-
-function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
-  return `${minutes}m`;
-}
-
-function formatSpeed(speedMs: number): string {
-  const kmh = speedMs * 3.6;
-  return `${kmh.toFixed(1)} km/h`;
-}
-
-function timeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (seconds < 60) return 'just now';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
-  if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
-  return date.toLocaleDateString();
-}
-
-function getActivityIcon(type: string) {
-  switch (type?.toLowerCase()) {
-    case 'ride':
-    case 'virtualride':
-      return Bike;
-    case 'run':
-    case 'virtualrun':
-      return Footprints;
-    default:
-      return Activity;
-  }
-}
-
-function getActivityColor(type: string) {
-  switch (type?.toLowerCase()) {
-    case 'ride':
-    case 'virtualride':
-      return 'from-orange-500 to-red-500';
-    case 'run':
-    case 'virtualrun':
-      return 'from-green-500 to-emerald-500';
-    default:
-      return 'from-cyan-500 to-purple-500';
-  }
-}
 
 export default function DashboardPage() {
   const [activities, setActivities] = useState<ActivityData[]>([]);
   const [stats, setStats] = useState<StatsData | null>(null);
-  const [achievementCount, setAchievementCount] = useState(0);
+  const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedActivity, setSelectedActivity] = useState<ActivityData | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [activitiesRes, statsRes, achievementsRes] = await Promise.all([
-          fetch('/api/activities?limit=5'),
+        const [activitiesRes, statsRes, userRes] = await Promise.all([
+          fetch('/api/activities?limit=50'),
           fetch('/api/stats'),
-          fetch('/api/achievements'),
+          fetch('/api/me'),
         ]);
 
         if (activitiesRes.ok) {
@@ -139,9 +119,12 @@ export default function DashboardPage() {
           setStats(statsData);
         }
 
-        if (achievementsRes.ok) {
-          const achievementsData = await achievementsRes.json();
-          setAchievementCount(achievementsData.unlocked || 0);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          setUser(userData.user);
+          if (userData.user?.lastStravaSync) {
+            setLastSyncTime(userData.user.lastStravaSync);
+          }
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -153,43 +136,64 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
-  const athleteStats = stats?.athleteStats;
-  const totalActivities = athleteStats
-    ? (athleteStats.allRideCount || 0) + (athleteStats.allRunCount || 0)
-    : stats?.activityCount || 0;
-  const recentActivities = athleteStats
-    ? (athleteStats.recentRideCount || 0) + (athleteStats.recentRunCount || 0)
-    : activities.length;
-  const totalDistance = athleteStats
-    ? (athleteStats.ytdRideDistance || 0) + (athleteStats.ytdRunDistance || 0)
-    : 0;
+  // Calculate weekly stats from activities
+  const weeklyStats = useMemo(() => {
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - 7);
 
-  const statsCards = [
-    {
-      label: 'Total Activities',
-      value: totalActivities.toString(),
-      icon: Activity,
-      theme: 'blue' as const,
-    },
-    {
-      label: 'This Year',
-      value: formatDistance(totalDistance),
-      icon: TrendingUp,
-      theme: 'emerald' as const,
-    },
-    {
-      label: 'Recent (4 weeks)',
-      value: recentActivities.toString(),
-      icon: Brain,
-      theme: 'pink' as const,
-    },
-    {
-      label: 'Achievements',
-      value: achievementCount.toString(),
-      icon: Trophy,
-      theme: 'orange' as const,
-    },
-  ];
+    const weeklyActivities = activities.filter((a) => new Date(a.startDate) >= weekStart);
+
+    return {
+      distance: weeklyActivities.reduce((sum, a) => sum + a.distance, 0),
+      calories: weeklyActivities.reduce((sum, a) => sum + (a.calories || 0), 0),
+      activities: weeklyActivities.length,
+      elevation: weeklyActivities.reduce((sum, a) => sum + (a.totalElevationGain || 0), 0),
+      time: weeklyActivities.reduce((sum, a) => sum + a.movingTime, 0),
+    };
+  }, [activities]);
+
+  // Recent 4 weeks count
+  const recent4WeeksCount = useMemo(() => {
+    const athleteStats = stats?.athleteStats;
+    if (athleteStats) {
+      return (athleteStats.recentRideCount || 0) + (athleteStats.recentRunCount || 0);
+    }
+    // Fallback to calculating from activities
+    const now = new Date();
+    const fourWeeksAgo = new Date(now);
+    fourWeeksAgo.setDate(now.getDate() - 28);
+    return activities.filter((a) => new Date(a.startDate) >= fourWeeksAgo).length;
+  }, [activities, stats]);
+
+  // Get last activity with polyline for map
+  const lastActivityWithRoute = useMemo(() => {
+    return activities.find((a) => a.summaryPolyline);
+  }, [activities]);
+
+  // Calculate aggregate heart rate stats
+  const heartRateStats = useMemo(() => {
+    const activitiesWithHR = activities.filter((a) => a.averageHeartrate);
+    if (activitiesWithHR.length === 0) return { avg: undefined, max: undefined };
+
+    const avgHR =
+      activitiesWithHR.reduce((sum, a) => sum + (a.averageHeartrate || 0), 0) /
+      activitiesWithHR.length;
+    const maxHR = Math.max(...activitiesWithHR.map((a) => a.maxHeartrate || 0));
+
+    return { avg: avgHR, max: maxHR > 0 ? maxHR : undefined };
+  }, [activities]);
+
+  // Total elevation from all activities or athlete stats
+  const totalElevation = useMemo(() => {
+    const athleteStats = stats?.athleteStats;
+    if (athleteStats) {
+      return (
+        (athleteStats.allRideElevationGain || 0) + (athleteStats.allRunElevationGain || 0)
+      );
+    }
+    return activities.reduce((sum, a) => sum + (a.totalElevationGain || 0), 0);
+  }, [activities, stats]);
 
   if (loading) {
     return (
@@ -201,131 +205,119 @@ export default function DashboardPage() {
     );
   }
 
+  const athleteStats = stats?.athleteStats;
+  const longestDistance = athleteStats?.biggestRideDistance || 0;
+  const biggestClimb = athleteStats?.biggestClimbElevationGain || 0;
+
   return (
     <PageContainer>
-      {/* Welcome Section */}
-      <div className="mb-8">
-        <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
-          Welcome back!
-        </h1>
-        <p className="text-slate-400">
-          Here's your activity summary
-        </p>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {statsCards.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <GlassCard theme={stat.theme} className="p-5">
-                <GlassIcon theme={stat.theme} className="mb-4">
-                  <Icon className="w-5 h-5" />
-                </GlassIcon>
-                <div className="text-2xl font-bold text-white mb-1">{stat.value}</div>
-                <div className="text-sm text-slate-400">{stat.label}</div>
-              </GlassCard>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Recent Activity Section */}
-      <GlassCard theme="slate" className="p-6">
-        <h2 className="text-xl font-bold text-white mb-4">Recent Activity</h2>
-
-        {activities.length === 0 ? (
-          <div className="text-center py-8">
-            <Activity className="w-12 h-12 text-slate-600/50 mx-auto mb-3" />
-            <p className="text-slate-400 mb-2">No activities yet</p>
-            <p className="text-sm text-slate-500">
-              Connect Strava to sync your activities or upload a GPX file
-            </p>
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-between mb-6"
+      >
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-white">
+            Command Center
+          </h1>
+          <p className="text-sm text-slate-400">
+            {lastSyncTime
+              ? `Last sync: ${new Date(lastSyncTime).toLocaleString()}`
+              : 'Your activity dashboard'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-xs text-emerald-400 font-medium">Active</span>
           </div>
-        ) : (
-          <TooltipProvider>
-            <div className="space-y-3">
-              {activities.map((activity) => {
-                const Icon = getActivityIcon(activity.type);
-                const activityTheme = activity.type?.toLowerCase().includes('ride') ? 'orange' : 'emerald';
-                return (
-                  <Tooltip key={activity.id}>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <GlassCard
-                          theme={activityTheme as 'orange' | 'emerald'}
-                          hover
-                          onClick={() => setSelectedActivity(activity)}
-                          className="flex items-center gap-4"
-                        >
-                          <GlassIcon theme={activityTheme as 'orange' | 'emerald'} className="flex-shrink-0">
-                            <Icon className="w-5 h-5" />
-                          </GlassIcon>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">{activity.name}</p>
-                            <p className="text-xs text-slate-400">
-                              {formatDistance(activity.distance)} • {formatDuration(activity.movingTime)} • {timeAgo(activity.startDate)}
-                            </p>
-                          </div>
-                          {activity.kudosCount !== undefined && activity.kudosCount > 0 && (
-                            <span className="text-orange-400 text-sm font-medium">👍 {activity.kudosCount}</span>
-                          )}
-                        </GlassCard>
-                      </div>
-                    </TooltipTrigger>
-                      <TooltipContent side="right" className="bg-slate-900/95 backdrop-blur-xl border-slate-700/50 p-4 max-w-xs shadow-xl">
-                        <div className="space-y-2">
-                          <p className="font-semibold text-white">{activity.name}</p>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                              <span className="text-slate-400">Distance:</span>
-                              <span className="text-white ml-1">{formatDistance(activity.distance)}</span>
-                            </div>
-                            <div>
-                              <span className="text-slate-400">Time:</span>
-                              <span className="text-white ml-1">{formatDuration(activity.movingTime)}</span>
-                            </div>
-                            {activity.totalElevationGain && (
-                              <div>
-                                <span className="text-slate-400">Elevation:</span>
-                                <span className="text-white ml-1">{activity.totalElevationGain}m</span>
-                              </div>
-                            )}
-                            {activity.averageSpeed && (
-                              <div>
-                                <span className="text-slate-400">Speed:</span>
-                                <span className="text-white ml-1">{formatSpeed(activity.averageSpeed)}</span>
-                              </div>
-                            )}
-                            {activity.averageHeartrate && (
-                              <div className="flex items-center gap-1">
-                                <Heart className="w-3 h-3 text-red-400" />
-                                <span className="text-white">{Math.round(activity.averageHeartrate)} bpm</span>
-                              </div>
-                            )}
-                            {activity.averageWatts && (
-                              <div className="flex items-center gap-1">
-                                <Zap className="w-3 h-3 text-yellow-400" />
-                                <span className="text-white">{Math.round(activity.averageWatts)} W</span>
-                              </div>
-                            )}
-                          </div>
-                          <p className="text-xs text-slate-500 mt-2">Click for full details</p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
-              </div>
-            </TooltipProvider>
-          )}
-      </GlassCard>
+        </div>
+      </motion.div>
+
+      {/* Row 1: Weekly Stats */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mb-6"
+      >
+        <WeeklyStatsRow
+          weeklyDistance={weeklyStats.distance}
+          weeklyCalories={weeklyStats.calories}
+          weeklyActivities={weeklyStats.activities}
+          weeklyElevation={weeklyStats.elevation}
+          weeklyTime={weeklyStats.time}
+          recentActivities4Weeks={recent4WeeksCount}
+        />
+      </motion.div>
+
+      {/* Row 2: Map + Feed + Calendar */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6"
+      >
+        {/* Left/Center: Route Map */}
+        <div className="lg:col-span-2">
+          <RouteMap
+            polyline={lastActivityWithRoute?.summaryPolyline}
+            activityName={lastActivityWithRoute?.name}
+            distance={lastActivityWithRoute?.distance}
+            className="h-full"
+          />
+        </div>
+
+        {/* Right Column: Feed + Calendar */}
+        <div className="space-y-4">
+          <StravaFeed
+            activities={activities.slice(0, 4).map((a) => ({
+              id: a.id,
+              name: a.name,
+              type: a.type,
+              distance: a.distance,
+              movingTime: a.movingTime,
+              startDate: a.startDate,
+              kudosCount: a.kudosCount,
+              city: a.city,
+            }))}
+            maxItems={4}
+          />
+          <CalendarHeatmap
+            activities={activities.map((a) => ({
+              startDate: a.startDate,
+              distance: a.distance,
+            }))}
+            weeks={12}
+          />
+        </div>
+      </motion.div>
+
+      {/* Row 3: Athlete Stats */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <AthleteStats
+          name={user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || undefined}
+          avatarUrl={user?.avatarUrl || undefined}
+          sex={user?.sex || undefined}
+          city={user?.city || undefined}
+          country={user?.country || undefined}
+          weight={user?.stravaWeight || undefined}
+          ftp={user?.stravaFTP || undefined}
+          avgHeartRate={heartRateStats.avg}
+          maxHeartRate={heartRateStats.max}
+          totalElevation={totalElevation}
+          longestDistance={longestDistance}
+          biggestClimb={biggestClimb}
+          followerCount={user?.stravaFollowerCount || undefined}
+          friendCount={user?.stravaFriendCount || undefined}
+          isPremium={user?.stravaPremium || false}
+        />
+      </motion.div>
 
       {/* Activity Detail Modal */}
       <ActivityDetailModal
