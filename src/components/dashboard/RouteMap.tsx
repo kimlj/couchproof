@@ -193,7 +193,7 @@ export function RouteMap({ polyline, activityName, distance, className }: RouteM
         )}
       </div>
 
-      <div className="relative aspect-[16/10] rounded-lg overflow-hidden bg-slate-900">
+      <div className="relative aspect-[16/10] rounded-lg overflow-hidden bg-slate-900" style={{ zIndex: 1 }}>
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10">
             <Loader2 className="w-6 h-6 text-cyan-500 animate-spin" />

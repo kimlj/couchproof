@@ -338,11 +338,11 @@ export default function DashboardPage() {
         className="flex items-center justify-between mb-6"
       >
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-white">Command Center</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold text-white">The Proof</h1>
           <p className="text-sm text-slate-400">
             {lastSyncTime
-              ? `Last sync: ${new Date(lastSyncTime).toLocaleString()}`
-              : 'Your activity dashboard'}
+              ? `Synced ${new Date(lastSyncTime).toLocaleDateString()}`
+              : "Evidence you're not a couch potato"}
           </p>
         </div>
         <div className="flex items-center gap-2">

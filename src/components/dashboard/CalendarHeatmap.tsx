@@ -277,61 +277,61 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
   };
 
   return (
-    <GlassCard theme="emerald" className="p-4">
+    <GlassCard theme="emerald" className="p-3">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2">
         <div>
-          <h3 className="text-sm font-semibold text-white">Activity Calendar</h3>
-          <p className="text-xs text-slate-500">
+          <h3 className="text-xs font-semibold text-white">Activity Calendar</h3>
+          <p className="text-[10px] text-slate-500">
             {currentStreak > 0 ? `🔥 ${currentStreak} day streak` : 'Start your streak!'}
           </p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <button
             onClick={goToPrevMonth}
-            className="p-1 hover:bg-slate-800/50 rounded transition-colors"
+            className="p-0.5 hover:bg-slate-800/50 rounded transition-colors"
           >
-            <ChevronLeft className="w-4 h-4 text-slate-400" />
+            <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
           </button>
           <button
             onClick={goToToday}
-            className="px-2 py-1 text-xs text-slate-400 hover:text-white hover:bg-slate-800/50 rounded transition-colors"
+            className="px-1.5 py-0.5 text-[10px] text-slate-400 hover:text-white hover:bg-slate-800/50 rounded transition-colors"
           >
-            {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
+            {MONTHS[currentDate.getMonth()].slice(0, 3)} {currentDate.getFullYear()}
           </button>
           <button
             onClick={goToNextMonth}
-            className="p-1 hover:bg-slate-800/50 rounded transition-colors"
+            className="p-0.5 hover:bg-slate-800/50 rounded transition-colors"
           >
-            <ChevronRight className="w-4 h-4 text-slate-400" />
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
           </button>
         </div>
       </div>
 
       {/* Day headers */}
-      <div className="grid grid-cols-7 gap-1 mb-1">
+      <div className="grid grid-cols-7 gap-0.5 mb-0.5">
         {DAYS.map((day) => (
-          <div key={day} className="text-center text-[10px] text-slate-500 font-medium py-1">
-            {day}
+          <div key={day} className="text-center text-[8px] text-slate-500 font-medium py-0.5">
+            {day.charAt(0)}
           </div>
         ))}
       </div>
 
       {/* Calendar grid */}
       <TooltipProvider>
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-0.5">
           {calendarDays.map((day, index) => {
             const hasActivity = day.data && day.data.count > 0;
             const activityCount = day.data?.count || 0;
             const types = day.data?.types || [];
 
             // Determine what to show
-            let content: React.ReactNode = <span className="text-[10px]">{day.day}</span>;
+            let content: React.ReactNode = <span className="text-[8px]">{day.day}</span>;
             let bgClass = day.isCurrentMonth ? 'bg-slate-800/30' : 'bg-slate-800/10';
             let textClass = day.isCurrentMonth ? 'text-slate-400' : 'text-slate-600';
 
             if (day.isToday) {
-              bgClass = 'bg-cyan-500/20 ring-1 ring-cyan-500/50';
+              bgClass = 'bg-cyan-500/20 ring-1 ring-cyan-500/40';
               textClass = 'text-cyan-400';
             }
 
@@ -340,7 +340,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
                 // Single activity - show emoji
                 bgClass = 'bg-emerald-500/20';
                 content = (
-                  <span className="text-xs" title={types[0]}>
+                  <span className="text-[10px]" title={types[0]}>
                     {getActivityEmoji(types[0])}
                   </span>
                 );
@@ -348,7 +348,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
                 // Multiple activities - show count with indicator
                 bgClass = 'bg-emerald-500/30';
                 content = (
-                  <span className="text-[10px] font-bold text-emerald-300">
+                  <span className="text-[8px] font-bold text-emerald-300">
                     {activityCount}
                   </span>
                 );
@@ -373,7 +373,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
                       }
                     }}
                     className={`
-                      aspect-square flex items-center justify-center rounded-md transition-all
+                      aspect-square flex items-center justify-center rounded transition-all text-[8px]
                       ${bgClass} ${textClass}
                       ${hasActivity ? 'cursor-pointer hover:scale-105 hover:ring-1 hover:ring-emerald-400/50' : ''}
                       ${day.isToday ? 'font-semibold' : ''}
@@ -428,11 +428,11 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
       </TooltipProvider>
 
       {/* Month stats */}
-      <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-700/30 text-[10px] text-slate-500">
-        <span>{monthStats.activeDays} active days</span>
-        <span>{monthStats.activities} activities</span>
+      <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-700/30 text-[9px] text-slate-500">
+        <span>{monthStats.activeDays} active</span>
+        <span>{monthStats.activities} workouts</span>
         {monthStats.distance > 0 && (
-          <span>{(monthStats.distance / 1000).toFixed(1)} km</span>
+          <span>{(monthStats.distance / 1000).toFixed(0)} km</span>
         )}
       </div>
     </GlassCard>
