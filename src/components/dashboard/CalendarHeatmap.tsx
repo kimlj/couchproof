@@ -277,86 +277,54 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
   };
 
   return (
-    <GlassCard theme="emerald" className="p-3">
+    <GlassCard theme="emerald" className="p-2">
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <h3 className="text-xs font-semibold text-white">Activity Calendar</h3>
-          <p className="text-[10px] text-slate-500">
-            {currentStreak > 0 ? `🔥 ${currentStreak} day streak` : 'Start your streak!'}
-          </p>
-        </div>
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={goToPrevMonth}
-            className="p-0.5 hover:bg-slate-800/50 rounded transition-colors"
-          >
-            <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] font-medium text-white">
+          {currentStreak > 0 && <span className="text-orange-400">🔥{currentStreak}</span>}
+        </span>
+        <div className="flex items-center">
+          <button onClick={goToPrevMonth} className="p-0.5 hover:bg-slate-800/50 rounded">
+            <ChevronLeft className="w-3 h-3 text-slate-400" />
           </button>
-          <button
-            onClick={goToToday}
-            className="px-1.5 py-0.5 text-[10px] text-slate-400 hover:text-white hover:bg-slate-800/50 rounded transition-colors"
-          >
-            {MONTHS[currentDate.getMonth()].slice(0, 3)} {currentDate.getFullYear()}
+          <button onClick={goToToday} className="px-1 text-[9px] text-slate-400 hover:text-white">
+            {MONTHS[currentDate.getMonth()].slice(0, 3)}
           </button>
-          <button
-            onClick={goToNextMonth}
-            className="p-0.5 hover:bg-slate-800/50 rounded transition-colors"
-          >
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+          <button onClick={goToNextMonth} className="p-0.5 hover:bg-slate-800/50 rounded">
+            <ChevronRight className="w-3 h-3 text-slate-400" />
           </button>
         </div>
       </div>
 
       {/* Day headers */}
-      <div className="grid grid-cols-7 gap-0.5 mb-0.5">
+      <div className="grid grid-cols-7 gap-px">
         {DAYS.map((day) => (
-          <div key={day} className="text-center text-[8px] text-slate-500 font-medium py-0.5">
-            {day.charAt(0)}
-          </div>
+          <div key={day} className="text-center text-[7px] text-slate-600">{day.charAt(0)}</div>
         ))}
       </div>
 
       {/* Calendar grid */}
       <TooltipProvider>
-        <div className="grid grid-cols-7 gap-0.5">
+        <div className="grid grid-cols-7 gap-px mt-px">
           {calendarDays.map((day, index) => {
             const hasActivity = day.data && day.data.count > 0;
             const activityCount = day.data?.count || 0;
             const types = day.data?.types || [];
 
-            // Determine what to show
-            let content: React.ReactNode = <span className="text-[8px]">{day.day}</span>;
-            let bgClass = day.isCurrentMonth ? 'bg-slate-800/30' : 'bg-slate-800/10';
-            let textClass = day.isCurrentMonth ? 'text-slate-400' : 'text-slate-600';
+            let content: React.ReactNode = <span className="text-[7px]">{day.day}</span>;
+            let bgClass = day.isCurrentMonth ? 'bg-slate-800/40' : 'bg-slate-800/20';
+            let textClass = day.isCurrentMonth ? 'text-slate-500' : 'text-slate-700';
 
             if (day.isToday) {
-              bgClass = 'bg-cyan-500/20 ring-1 ring-cyan-500/40';
+              bgClass = 'bg-cyan-500/30 ring-1 ring-cyan-500/50';
               textClass = 'text-cyan-400';
             }
 
             if (hasActivity && day.isCurrentMonth) {
-              if (activityCount === 1) {
-                // Single activity - show emoji
-                bgClass = 'bg-emerald-500/20';
-                content = (
-                  <span className="text-[10px]" title={types[0]}>
-                    {getActivityEmoji(types[0])}
-                  </span>
-                );
-              } else {
-                // Multiple activities - show count with indicator
-                bgClass = 'bg-emerald-500/30';
-                content = (
-                  <span className="text-[8px] font-bold text-emerald-300">
-                    {activityCount}
-                  </span>
-                );
-              }
-            }
-
-            if (day.isFuture) {
-              textClass = 'text-slate-700';
+              bgClass = activityCount > 1 ? 'bg-emerald-500/40' : 'bg-emerald-500/25';
+              content = activityCount > 1
+                ? <span className="text-[7px] font-bold text-emerald-300">{activityCount}</span>
+                : <span className="text-[9px]">{getActivityEmoji(types[0])}</span>;
             }
 
             return (
@@ -372,52 +340,24 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
                         }
                       }
                     }}
-                    className={`
-                      aspect-square flex items-center justify-center rounded transition-all text-[8px]
-                      ${bgClass} ${textClass}
-                      ${hasActivity ? 'cursor-pointer hover:scale-105 hover:ring-1 hover:ring-emerald-400/50' : ''}
-                      ${day.isToday ? 'font-semibold' : ''}
-                    `}
+                    className={`h-5 flex items-center justify-center rounded-sm ${bgClass} ${textClass} ${hasActivity ? 'cursor-pointer hover:ring-1 hover:ring-emerald-400/50' : ''}`}
                   >
                     {content}
                   </div>
                 </TooltipTrigger>
                 {hasActivity && day.data && (
-                  <TooltipContent
-                    side="top"
-                    className="bg-slate-900/95 backdrop-blur-xl border-slate-700/50 p-3 shadow-xl z-[100]"
-                  >
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-white">
-                        {new Date(day.date).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </p>
-                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                        {day.data.activities.map((act, i) => (
-                          <div
-                            key={i}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onActivityClick?.(act.id);
-                            }}
-                            className="flex items-center gap-2 text-xs p-1 rounded hover:bg-slate-800/50 cursor-pointer"
-                          >
-                            <span>{getActivityEmoji(act.type)}</span>
-                            <span className="text-slate-300 truncate max-w-[120px]">{act.name}</span>
-                            {act.distance > 0 && (
-                              <span className="text-slate-500 text-[10px]">{formatDistance(act.distance)}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      {day.data.distance > 0 && (
-                        <p className="text-[10px] text-slate-500 pt-1 border-t border-slate-700/50">
-                          Total: {formatDistance(day.data.distance)}
-                        </p>
-                      )}
+                  <TooltipContent side="top" className="bg-slate-900/95 border-slate-700/50 p-2 z-[100]">
+                    <p className="text-[10px] font-medium text-white mb-1">
+                      {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    </p>
+                    <div className="space-y-1 max-h-24 overflow-y-auto">
+                      {day.data.activities.map((act, i) => (
+                        <div key={i} onClick={(e) => { e.stopPropagation(); onActivityClick?.(act.id); }}
+                          className="flex items-center gap-1.5 text-[10px] p-0.5 rounded hover:bg-slate-800/50 cursor-pointer">
+                          <span>{getActivityEmoji(act.type)}</span>
+                          <span className="text-slate-300 truncate max-w-[100px]">{act.name}</span>
+                        </div>
+                      ))}
                     </div>
                   </TooltipContent>
                 )}
@@ -427,13 +367,10 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
         </div>
       </TooltipProvider>
 
-      {/* Month stats */}
-      <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-700/30 text-[9px] text-slate-500">
-        <span>{monthStats.activeDays} active</span>
-        <span>{monthStats.activities} workouts</span>
-        {monthStats.distance > 0 && (
-          <span>{(monthStats.distance / 1000).toFixed(0)} km</span>
-        )}
+      {/* Footer */}
+      <div className="flex justify-between mt-1 text-[8px] text-slate-600">
+        <span>{monthStats.activeDays}d</span>
+        <span>{monthStats.activities} 💪</span>
       </div>
     </GlassCard>
   );
