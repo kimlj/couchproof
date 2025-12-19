@@ -161,7 +161,7 @@ export function StravaFeed({ activities, maxItems = 4, onActivityClick }: Strava
                   </TooltipTrigger>
                   <TooltipContent
                     side="left"
-                    className="bg-slate-900/95 backdrop-blur-xl border-slate-700/50 p-4 max-w-xs shadow-xl"
+                    className="bg-slate-900/95 backdrop-blur-xl border-slate-700/50 p-4 max-w-xs shadow-xl z-[100]"
                   >
                     <div className="space-y-3">
                       <div>

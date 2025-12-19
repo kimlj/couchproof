@@ -415,7 +415,12 @@ export default function DashboardPage() {
               distance: a.distance,
               type: a.type,
             }))}
-            weeks={12}
+            onActivityClick={(activityId) => {
+              const activity = activities.find((a) => a.id === activityId);
+              if (activity) {
+                setSelectedActivity(activity);
+              }
+            }}
           />
         </div>
       </motion.div>

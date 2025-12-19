@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { Calendar, Bike, Footprints, Waves, Activity } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Bike, Footprints, Waves, Dumbbell, Activity, Mountain, Heart } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -31,62 +31,109 @@ interface CalendarHeatmapProps {
     distance: number;
     type: string;
   }>;
-  weeks?: number;
   onDayClick?: (date: string, activities: ActivityDay['activities']) => void;
+  onActivityClick?: (activityId: string) => void;
 }
 
+// Comprehensive activity type mapping
 function getActivityIcon(type: string) {
-  switch (type?.toLowerCase()) {
-    case 'ride':
-    case 'virtualride':
-    case 'ebikeride':
-    case 'mountainbikeride':
-    case 'gravelride':
-      return Bike;
-    case 'run':
-    case 'virtualrun':
-    case 'trailrun':
-      return Footprints;
-    case 'swim':
-      return Waves;
-    default:
-      return Activity;
+  const normalizedType = type?.toLowerCase() || '';
+
+  // Cycling
+  if (['ride', 'virtualride', 'ebikeride', 'mountainbikeride', 'gravelride', 'handcycle', 'velomobile'].includes(normalizedType)) {
+    return Bike;
   }
+  // Running/Walking
+  if (['run', 'virtualrun', 'trailrun', 'walk', 'hike'].includes(normalizedType)) {
+    return Footprints;
+  }
+  // Swimming
+  if (['swim', 'openwater', 'openswimwater'].includes(normalizedType)) {
+    return Waves;
+  }
+  // Gym/Strength
+  if (['weighttraining', 'workout', 'crossfit', 'elliptical', 'stairstepper', 'rowing', 'rockclimbing'].includes(normalizedType)) {
+    return Dumbbell;
+  }
+  // Cardio
+  if (['yoga', 'pilates', 'hiit'].includes(normalizedType)) {
+    return Heart;
+  }
+  // Outdoor
+  if (['alpineski', 'backcountryski', 'nordicski', 'snowboard', 'snowshoe', 'iceskate', 'inlineskate', 'rollerski'].includes(normalizedType)) {
+    return Mountain;
+  }
+  // Water sports
+  if (['canoeing', 'kayaking', 'kitesurf', 'surfing', 'standuppaddling', 'windsurf', 'sailing'].includes(normalizedType)) {
+    return Waves;
+  }
+
+  return Activity;
 }
 
 function getActivityEmoji(type: string): string {
-  switch (type?.toLowerCase()) {
-    case 'ride':
-    case 'virtualride':
-    case 'ebikeride':
-    case 'mountainbikeride':
-    case 'gravelride':
-      return '🚴';
-    case 'run':
-    case 'virtualrun':
-    case 'trailrun':
-      return '🏃';
-    case 'swim':
-      return '🏊';
-    case 'walk':
-    case 'hike':
-      return '🚶';
-    case 'yoga':
-      return '🧘';
-    case 'weighttraining':
-      return '🏋️';
-    default:
-      return '💪';
-  }
+  const normalizedType = type?.toLowerCase() || '';
+
+  // Cycling
+  if (['ride', 'virtualride', 'gravelride'].includes(normalizedType)) return '🚴';
+  if (['mountainbikeride'].includes(normalizedType)) return '🚵';
+  if (['ebikeride'].includes(normalizedType)) return '🔋🚴';
+
+  // Running/Walking
+  if (['run', 'virtualrun'].includes(normalizedType)) return '🏃';
+  if (['trailrun'].includes(normalizedType)) return '🏃‍♂️🌲';
+  if (['walk'].includes(normalizedType)) return '🚶';
+  if (['hike'].includes(normalizedType)) return '🥾';
+
+  // Swimming
+  if (['swim'].includes(normalizedType)) return '🏊';
+
+  // Gym/Strength
+  if (['weighttraining'].includes(normalizedType)) return '🏋️';
+  if (['workout', 'crossfit'].includes(normalizedType)) return '💪';
+  if (['elliptical', 'stairstepper'].includes(normalizedType)) return '🏃‍♂️';
+  if (['rowing'].includes(normalizedType)) return '🚣';
+  if (['rockclimbing'].includes(normalizedType)) return '🧗';
+
+  // Mind/Body
+  if (['yoga'].includes(normalizedType)) return '🧘';
+  if (['pilates'].includes(normalizedType)) return '🤸';
+
+  // Winter Sports
+  if (['alpineski', 'backcountryski', 'nordicski'].includes(normalizedType)) return '⛷️';
+  if (['snowboard'].includes(normalizedType)) return '🏂';
+  if (['snowshoe'].includes(normalizedType)) return '🥾❄️';
+  if (['iceskate'].includes(normalizedType)) return '⛸️';
+
+  // Water Sports
+  if (['canoeing', 'kayaking'].includes(normalizedType)) return '🛶';
+  if (['surfing', 'kitesurf', 'windsurf'].includes(normalizedType)) return '🏄';
+  if (['standuppaddling'].includes(normalizedType)) return '🏄‍♂️';
+  if (['sailing'].includes(normalizedType)) return '⛵';
+
+  // Other
+  if (['golf'].includes(normalizedType)) return '⛳';
+  if (['tennis', 'pickleball', 'racquetball', 'squash', 'badminton'].includes(normalizedType)) return '🎾';
+  if (['soccer', 'football'].includes(normalizedType)) return '⚽';
+  if (['basketball'].includes(normalizedType)) return '🏀';
+  if (['volleyball'].includes(normalizedType)) return '🏐';
+
+  return '💪';
 }
 
 function formatDistance(meters: number): string {
+  if (meters === 0) return '';
   const km = meters / 1000;
   return `${km.toFixed(1)} km`;
 }
 
-export function CalendarHeatmap({ activities, weeks = 12, onDayClick }: CalendarHeatmapProps) {
-  const { grid, activityMap, totalDays, activeDays, currentStreak } = useMemo(() => {
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: CalendarHeatmapProps) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const { calendarDays, activityMap, monthStats, currentStreak } = useMemo(() => {
     // Create activity map
     const activityMap = new Map<string, ActivityDay>();
 
@@ -121,177 +168,272 @@ export function CalendarHeatmap({ activities, weeks = 12, onDayClick }: Calendar
       }
     });
 
-    // Generate grid for last N weeks
-    const today = new Date();
-    const grid: Array<Array<{ date: string; data: ActivityDay | null; isFuture: boolean }>> = [];
-
-    // Start from the most recent Sunday
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - startDate.getDay() - (weeks - 1) * 7);
-
-    let totalDays = 0;
-    let activeDays = 0;
-
     // Calculate current streak
     let currentStreak = 0;
+    const today = new Date();
     const checkDate = new Date(today);
+
     while (true) {
       const dateStr = checkDate.toISOString().split('T')[0];
       if (activityMap.has(dateStr)) {
         currentStreak++;
         checkDate.setDate(checkDate.getDate() - 1);
+      } else if (currentStreak === 0) {
+        // Check yesterday if today has no activity
+        checkDate.setDate(checkDate.getDate() - 1);
+        const yesterdayStr = checkDate.toISOString().split('T')[0];
+        if (activityMap.has(yesterdayStr)) {
+          currentStreak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          break;
+        }
       } else {
         break;
       }
     }
 
-    for (let week = 0; week < weeks; week++) {
-      const weekData: Array<{ date: string; data: ActivityDay | null; isFuture: boolean }> = [];
-      for (let day = 0; day < 7; day++) {
-        const currentDate = new Date(startDate);
-        currentDate.setDate(startDate.getDate() + week * 7 + day);
+    // Generate calendar for current month
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
 
-        const isFuture = currentDate > today;
-        const dateStr = currentDate.toISOString().split('T')[0];
-        const data = activityMap.get(dateStr) || null;
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDayOfWeek = firstDay.getDay();
 
-        weekData.push({ date: dateStr, data, isFuture });
+    const calendarDays: Array<{ date: string; day: number; isCurrentMonth: boolean; data: ActivityDay | null; isToday: boolean; isFuture: boolean }> = [];
 
-        if (!isFuture) {
-          totalDays++;
-          if (data) activeDays++;
-        }
-      }
-      grid.push(weekData);
+    // Previous month days
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    for (let i = startDayOfWeek - 1; i >= 0; i--) {
+      const day = prevMonthLastDay - i;
+      const date = new Date(year, month - 1, day).toISOString().split('T')[0];
+      calendarDays.push({
+        date,
+        day,
+        isCurrentMonth: false,
+        data: activityMap.get(date) || null,
+        isToday: false,
+        isFuture: false,
+      });
     }
 
-    return { grid, activityMap, totalDays, activeDays, currentStreak };
-  }, [activities, weeks]);
+    // Current month days
+    const todayStr = new Date().toISOString().split('T')[0];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day).toISOString().split('T')[0];
+      const isToday = date === todayStr;
+      const isFuture = new Date(date) > new Date();
+      calendarDays.push({
+        date,
+        day,
+        isCurrentMonth: true,
+        data: activityMap.get(date) || null,
+        isToday,
+        isFuture,
+      });
+    }
 
-  const consistencyRate = totalDays > 0 ? Math.round((activeDays / totalDays) * 100) : 0;
+    // Next month days to fill the grid
+    const remainingDays = 42 - calendarDays.length; // 6 rows * 7 days
+    for (let day = 1; day <= remainingDays; day++) {
+      const date = new Date(year, month + 1, day).toISOString().split('T')[0];
+      calendarDays.push({
+        date,
+        day,
+        isCurrentMonth: false,
+        data: activityMap.get(date) || null,
+        isToday: false,
+        isFuture: true,
+      });
+    }
+
+    // Month stats
+    const monthActivities = activities.filter((a) => {
+      const actDate = new Date(a.startDate);
+      return actDate.getFullYear() === year && actDate.getMonth() === month;
+    });
+
+    const monthStats = {
+      activities: monthActivities.length,
+      distance: monthActivities.reduce((sum, a) => sum + a.distance, 0),
+      activeDays: new Set(monthActivities.map((a) => new Date(a.startDate).toISOString().split('T')[0])).size,
+    };
+
+    return { calendarDays, activityMap, monthStats, currentStreak };
+  }, [activities, currentDate]);
+
+  const goToPrevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const goToNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
 
   return (
     <GlassCard theme="emerald" className="p-4">
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-white">Activity Calendar</h3>
-          <p className="text-xs text-slate-500">{currentStreak > 0 ? `🔥 ${currentStreak} day streak` : 'Start your streak!'}</p>
+          <p className="text-xs text-slate-500">
+            {currentStreak > 0 ? `🔥 ${currentStreak} day streak` : 'Start your streak!'}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-emerald-400 font-medium">{consistencyRate}%</span>
-          <Calendar className="w-4 h-4 text-slate-500" />
+        <div className="flex items-center gap-1">
+          <button
+            onClick={goToPrevMonth}
+            className="p-1 hover:bg-slate-800/50 rounded transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4 text-slate-400" />
+          </button>
+          <button
+            onClick={goToToday}
+            className="px-2 py-1 text-xs text-slate-400 hover:text-white hover:bg-slate-800/50 rounded transition-colors"
+          >
+            {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
+          </button>
+          <button
+            onClick={goToNextMonth}
+            className="p-1 hover:bg-slate-800/50 rounded transition-colors"
+          >
+            <ChevronRight className="w-4 h-4 text-slate-400" />
+          </button>
         </div>
       </div>
 
+      {/* Day headers */}
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {DAYS.map((day) => (
+          <div key={day} className="text-center text-[10px] text-slate-500 font-medium py-1">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
       <TooltipProvider>
-        <div className="flex gap-1">
-          {/* Day labels */}
-          <div className="flex flex-col gap-1 pr-1">
-            <div className="h-3.5 text-[10px] text-slate-600"></div>
-            <div className="h-3.5 text-[10px] text-slate-600 flex items-center">M</div>
-            <div className="h-3.5 text-[10px] text-slate-600"></div>
-            <div className="h-3.5 text-[10px] text-slate-600 flex items-center">W</div>
-            <div className="h-3.5 text-[10px] text-slate-600"></div>
-            <div className="h-3.5 text-[10px] text-slate-600 flex items-center">F</div>
-            <div className="h-3.5 text-[10px] text-slate-600"></div>
-          </div>
+        <div className="grid grid-cols-7 gap-1">
+          {calendarDays.map((day, index) => {
+            const hasActivity = day.data && day.data.count > 0;
+            const activityCount = day.data?.count || 0;
+            const types = day.data?.types || [];
 
-          {/* Grid */}
-          <div className="flex gap-1 flex-1 overflow-hidden">
-            {grid.map((week, weekIndex) => (
-              <div key={weekIndex} className="flex flex-col gap-1">
-                {week.map((day, dayIndex) => {
-                  if (day.isFuture) {
-                    return (
-                      <div
-                        key={`${weekIndex}-${dayIndex}`}
-                        className="w-3.5 h-3.5 rounded-sm bg-transparent"
-                      />
-                    );
-                  }
+            // Determine what to show
+            let content: React.ReactNode = <span className="text-[10px]">{day.day}</span>;
+            let bgClass = day.isCurrentMonth ? 'bg-slate-800/30' : 'bg-slate-800/10';
+            let textClass = day.isCurrentMonth ? 'text-slate-400' : 'text-slate-600';
 
-                  const hasActivity = day.data && day.data.count > 0;
-                  const activityCount = day.data?.count || 0;
-                  const types = day.data?.types || [];
+            if (day.isToday) {
+              bgClass = 'bg-cyan-500/20 ring-1 ring-cyan-500/50';
+              textClass = 'text-cyan-400';
+            }
 
-                  // Determine what to show
-                  let content: React.ReactNode = null;
-                  let bgClass = 'bg-slate-800/50';
+            if (hasActivity && day.isCurrentMonth) {
+              if (activityCount === 1) {
+                // Single activity - show emoji
+                bgClass = 'bg-emerald-500/20';
+                content = (
+                  <span className="text-xs" title={types[0]}>
+                    {getActivityEmoji(types[0])}
+                  </span>
+                );
+              } else {
+                // Multiple activities - show count with indicator
+                bgClass = 'bg-emerald-500/30';
+                content = (
+                  <span className="text-[10px] font-bold text-emerald-300">
+                    {activityCount}
+                  </span>
+                );
+              }
+            }
 
-                  if (hasActivity) {
-                    if (activityCount === 1) {
-                      // Single activity - show icon
-                      const Icon = getActivityIcon(types[0]);
-                      bgClass = 'bg-emerald-500/20';
-                      content = <Icon className="w-2 h-2 text-emerald-400" />;
-                    } else {
-                      // Multiple activities - show count
-                      bgClass = 'bg-emerald-500/40';
-                      content = <span className="text-[8px] font-bold text-emerald-300">{activityCount}</span>;
-                    }
-                  }
+            if (day.isFuture) {
+              textClass = 'text-slate-700';
+            }
 
-                  return (
-                    <Tooltip key={`${weekIndex}-${dayIndex}`}>
-                      <TooltipTrigger asChild>
-                        <div
-                          onClick={() => hasActivity && onDayClick?.(day.date, day.data!.activities)}
-                          className={`w-3.5 h-3.5 rounded-sm transition-all flex items-center justify-center ${bgClass} ${hasActivity ? 'cursor-pointer hover:scale-110 hover:ring-1 hover:ring-emerald-400/50' : ''}`}
-                        >
-                          {content}
-                        </div>
-                      </TooltipTrigger>
-                      {hasActivity && day.data && (
-                        <TooltipContent
-                          side="top"
-                          className="bg-slate-900/95 backdrop-blur-xl border-slate-700/50 p-3 shadow-xl"
-                        >
-                          <div className="space-y-2">
-                            <p className="text-xs font-medium text-white">
-                              {new Date(day.date).toLocaleDateString('en-US', {
-                                weekday: 'short',
-                                month: 'short',
-                                day: 'numeric',
-                              })}
-                            </p>
-                            <div className="space-y-1.5">
-                              {day.data.activities.map((act, i) => (
-                                <div key={i} className="flex items-center gap-2 text-xs">
-                                  <span>{getActivityEmoji(act.type)}</span>
-                                  <span className="text-slate-300 truncate max-w-[120px]">{act.name}</span>
-                                  <span className="text-slate-500">{formatDistance(act.distance)}</span>
-                                </div>
-                              ))}
-                            </div>
-                            <p className="text-[10px] text-slate-500 pt-1 border-t border-slate-700/50">
-                              Total: {formatDistance(day.data.distance)}
-                            </p>
+            return (
+              <Tooltip key={index}>
+                <TooltipTrigger asChild>
+                  <div
+                    onClick={() => {
+                      if (hasActivity && day.data) {
+                        if (day.data.activities.length === 1 && onActivityClick) {
+                          onActivityClick(day.data.activities[0].id);
+                        } else if (onDayClick) {
+                          onDayClick(day.date, day.data.activities);
+                        }
+                      }
+                    }}
+                    className={`
+                      aspect-square flex items-center justify-center rounded-md transition-all
+                      ${bgClass} ${textClass}
+                      ${hasActivity ? 'cursor-pointer hover:scale-105 hover:ring-1 hover:ring-emerald-400/50' : ''}
+                      ${day.isToday ? 'font-semibold' : ''}
+                    `}
+                  >
+                    {content}
+                  </div>
+                </TooltipTrigger>
+                {hasActivity && day.data && (
+                  <TooltipContent
+                    side="top"
+                    className="bg-slate-900/95 backdrop-blur-xl border-slate-700/50 p-3 shadow-xl z-[100]"
+                  >
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-white">
+                        {new Date(day.date).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </p>
+                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                        {day.data.activities.map((act, i) => (
+                          <div
+                            key={i}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onActivityClick?.(act.id);
+                            }}
+                            className="flex items-center gap-2 text-xs p-1 rounded hover:bg-slate-800/50 cursor-pointer"
+                          >
+                            <span>{getActivityEmoji(act.type)}</span>
+                            <span className="text-slate-300 truncate max-w-[120px]">{act.name}</span>
+                            {act.distance > 0 && (
+                              <span className="text-slate-500 text-[10px]">{formatDistance(act.distance)}</span>
+                            )}
                           </div>
-                        </TooltipContent>
+                        ))}
+                      </div>
+                      {day.data.distance > 0 && (
+                        <p className="text-[10px] text-slate-500 pt-1 border-t border-slate-700/50">
+                          Total: {formatDistance(day.data.distance)}
+                        </p>
                       )}
-                    </Tooltip>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
+                    </div>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            );
+          })}
         </div>
       </TooltipProvider>
 
-      {/* Legend */}
-      <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-700/30">
-        <div className="flex items-center gap-3 text-[10px] text-slate-500">
-          <span className="flex items-center gap-1">
-            <Bike className="w-2.5 h-2.5" /> Ride
-          </span>
-          <span className="flex items-center gap-1">
-            <Footprints className="w-2.5 h-2.5" /> Run
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="text-[8px] font-bold bg-emerald-500/40 rounded px-1">2+</span> Multi
-          </span>
-        </div>
-        <span className="text-[10px] text-slate-500">{activeDays} active days</span>
+      {/* Month stats */}
+      <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-700/30 text-[10px] text-slate-500">
+        <span>{monthStats.activeDays} active days</span>
+        <span>{monthStats.activities} activities</span>
+        {monthStats.distance > 0 && (
+          <span>{(monthStats.distance / 1000).toFixed(1)} km</span>
+        )}
       </div>
     </GlassCard>
   );
