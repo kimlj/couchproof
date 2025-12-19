@@ -2,16 +2,22 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { MapPin, Loader2, Route, Map, Mountain, Satellite, Moon, Sun } from 'lucide-react';
+import { MapPin, Loader2, Route, Moon, Sun, TrendingUp, Mountain, Clock } from 'lucide-react';
 
 interface RouteMapProps {
   polyline?: string | null;
   activityName?: string;
   distance?: number;
   className?: string;
+  elevationGain?: number;
+  movingTime?: number;
+  city?: string;
+  activityType?: string;
+  startLat?: number;
+  startLng?: number;
 }
 
-type MapStyle = 'dark' | 'satellite' | 'outdoor' | 'light';
+type MapStyle = 'dark' | 'light';
 
 const MAP_STYLES: Record<MapStyle, { url: string; name: string; icon: typeof Moon; routeColor: string }> = {
   dark: {
@@ -19,18 +25,6 @@ const MAP_STYLES: Record<MapStyle, { url: string; name: string; icon: typeof Moo
     name: 'Dark',
     icon: Moon,
     routeColor: '#22d3ee',
-  },
-  satellite: {
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    name: 'Satellite',
-    icon: Satellite,
-    routeColor: '#fbbf24',
-  },
-  outdoor: {
-    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-    name: 'Terrain',
-    icon: Mountain,
-    routeColor: '#ef4444',
   },
   light: {
     url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
@@ -79,7 +73,29 @@ function decodePolyline(encoded: string): [number, number][] {
   return points;
 }
 
-export function RouteMap({ polyline, activityName, distance, className }: RouteMapProps) {
+// Activity types that typically have elevation data
+const ELEVATION_ACTIVITY_TYPES = [
+  'ride', 'virtualride', 'ebikeride', 'mountainbikeride', 'gravelride',
+  'run', 'virtualrun', 'trailrun', 'walk', 'hike',
+  'alpineski', 'backcountryski', 'nordicski', 'snowboard', 'snowshoe',
+  'rockclimbing', 'rollerski', 'inlineskate'
+];
+
+function hasElevation(activityType?: string): boolean {
+  if (!activityType) return false;
+  return ELEVATION_ACTIVITY_TYPES.includes(activityType.toLowerCase());
+}
+
+function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
+}
+
+export function RouteMap({ polyline, activityName, distance, className, elevationGain, movingTime, city, activityType, startLat, startLng }: RouteMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const tileLayerRef = useRef<any>(null);
@@ -90,6 +106,55 @@ export function RouteMap({ polyline, activityName, distance, className }: RouteM
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
   const [leafletModule, setLeafletModule] = useState<any>(null);
   const pointsRef = useRef<[number, number][]>([]);
+  const [location, setLocation] = useState<string | null>(city || null);
+
+  // Reverse geocode to get city from coordinates
+  useEffect(() => {
+    if (city) {
+      setLocation(city);
+      return;
+    }
+
+    // Get coordinates from polyline or props
+    let lat = startLat;
+    let lng = startLng;
+
+    if (!lat || !lng) {
+      // Try to get from polyline (returns [lat, lng])
+      if (polyline) {
+        const points = decodePolyline(polyline);
+        if (points.length > 0) {
+          lat = points[0][0];
+          lng = points[0][1];
+        }
+      }
+    }
+
+    if (!lat || !lng) return;
+
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    if (!token) return;
+
+    // Fetch location from Mapbox reverse geocoding
+    fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?types=place&access_token=${token}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.features && data.features.length > 0) {
+          const place = data.features[0];
+          // Get city name (place name) and optionally region
+          const cityName = place.text;
+          const context = place.context || [];
+          const region = context.find((c: any) => c.id.startsWith('region'))?.text;
+
+          if (cityName) {
+            setLocation(region ? `${cityName}, ${region}` : cityName);
+          }
+        }
+      })
+      .catch(err => {
+        console.error('Reverse geocoding error:', err);
+      });
+  }, [city, startLat, startLng, polyline]);
 
   // Load Leaflet and initialize map
   useEffect(() => {
@@ -262,10 +327,7 @@ export function RouteMap({ polyline, activityName, distance, className }: RouteM
   }, [mapStyle, leafletModule]);
 
   const cycleMapStyle = () => {
-    const styles: MapStyle[] = ['dark', 'satellite', 'outdoor', 'light'];
-    const currentIndex = styles.indexOf(mapStyle);
-    const nextIndex = (currentIndex + 1) % styles.length;
-    setMapStyle(styles[nextIndex]);
+    setMapStyle(mapStyle === 'dark' ? 'light' : 'dark');
   };
 
   if (!polyline) {
@@ -286,30 +348,63 @@ export function RouteMap({ polyline, activityName, distance, className }: RouteM
 
   const CurrentStyleIcon = MAP_STYLES[mapStyle].icon;
 
+  const showElevation = hasElevation(activityType) && elevationGain && elevationGain > 0;
+
   return (
     <GlassCard theme="cyan" className={`p-4 ${className}`}>
+      {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div>
           <h3 className="text-sm font-semibold text-white">Last Route</h3>
-          {activityName && (
-            <p className="text-xs text-slate-400 truncate max-w-[200px]">{activityName}</p>
-          )}
+          <div className="flex items-center gap-1.5 text-xs">
+            {activityName && (
+              <span className="text-slate-400 truncate max-w-[150px]">{activityName}</span>
+            )}
+            {activityName && location && (
+              <span className="text-slate-600">•</span>
+            )}
+            {location && (
+              <span className="text-slate-500 flex items-center gap-0.5">
+                <MapPin className="w-3 h-3" />
+                {location}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        {/* Stats + Toggle on right */}
+        <div className="flex items-center gap-3">
+          {distance && (
+            <div className="flex items-center gap-1">
+              <TrendingUp className="w-3 h-3 text-cyan-400" />
+              <span className="text-xs text-cyan-400 font-medium">
+                {(distance / 1000).toFixed(1)} km
+              </span>
+            </div>
+          )}
+          {showElevation && (
+            <div className="flex items-center gap-1">
+              <Mountain className="w-3 h-3 text-emerald-400" />
+              <span className="text-xs text-emerald-400 font-medium">
+                {Math.round(elevationGain)}m
+              </span>
+            </div>
+          )}
+          {movingTime && movingTime > 0 && (
+            <div className="flex items-center gap-1">
+              <Clock className="w-3 h-3 text-amber-400" />
+              <span className="text-xs text-amber-400 font-medium">
+                {formatDuration(movingTime)}
+              </span>
+            </div>
+          )}
           {/* Map style toggle */}
           <button
             onClick={cycleMapStyle}
-            className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-800/60 hover:bg-slate-700/60 transition-colors"
-            title={`Switch map style (${MAP_STYLES[mapStyle].name})`}
+            className="flex items-center gap-1 px-2 py-1 rounded-md bg-slate-800/60 hover:bg-slate-700/60 transition-colors"
+            title={`Switch to ${mapStyle === 'dark' ? 'Light' : 'Dark'} mode`}
           >
             <CurrentStyleIcon className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-[10px] text-slate-400">{MAP_STYLES[mapStyle].name}</span>
           </button>
-          {distance && (
-            <span className="text-xs text-cyan-400 font-medium">
-              {(distance / 1000).toFixed(1)} km
-            </span>
-          )}
         </div>
       </div>
 

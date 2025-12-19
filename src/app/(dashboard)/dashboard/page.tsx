@@ -383,6 +383,10 @@ export default function DashboardPage() {
             polyline={lastActivityWithRoute?.summaryPolyline}
             activityName={lastActivityWithRoute?.name}
             distance={lastActivityWithRoute?.distance}
+            elevationGain={lastActivityWithRoute?.totalElevationGain}
+            movingTime={lastActivityWithRoute?.movingTime}
+            city={lastActivityWithRoute?.city}
+            activityType={lastActivityWithRoute?.type}
             className="h-full"
           />
         </div>
