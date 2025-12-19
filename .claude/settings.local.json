@@ -25,7 +25,8 @@
       "Bash(git -C C:/Users/kimju/Documents/couchproof add -A)",
       "Bash(git -C C:/Users/kimju/Documents/couchproof status)",
       "Bash(git commit:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)"
     ]
   }
 }

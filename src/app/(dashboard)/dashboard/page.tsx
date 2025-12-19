@@ -8,8 +8,12 @@ import { RouteMap } from '@/components/dashboard/RouteMap';
 import { StravaFeed } from '@/components/dashboard/StravaFeed';
 import { CalendarHeatmap } from '@/components/dashboard/CalendarHeatmap';
 import { AthleteStats } from '@/components/dashboard/AthleteStats';
-import { GlassCard, GlassIcon } from '@/components/ui/glass-card';
-import { Loader2, RefreshCw, Activity } from 'lucide-react';
+import { WeeklyRecap } from '@/components/dashboard/WeeklyRecap';
+import { DailyRoast } from '@/components/dashboard/DailyRoast';
+import { WeekComparison } from '@/components/dashboard/WeekComparison';
+import { QuickStats } from '@/components/dashboard/QuickStats';
+import { GlassCard } from '@/components/ui/glass-card';
+import { Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 type ActivityData = {
@@ -104,7 +108,7 @@ export default function DashboardPage() {
     async function fetchData() {
       try {
         const [activitiesRes, statsRes, userRes] = await Promise.all([
-          fetch('/api/activities?limit=50'),
+          fetch('/api/activities?limit=100'),
           fetch('/api/stats'),
           fetch('/api/me'),
         ]);
@@ -153,13 +157,34 @@ export default function DashboardPage() {
     };
   }, [activities]);
 
+  // Last week stats for comparison
+  const lastWeekStats = useMemo(() => {
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - 14);
+    const weekEnd = new Date(now);
+    weekEnd.setDate(now.getDate() - 7);
+
+    const lastWeekActivities = activities.filter((a) => {
+      const date = new Date(a.startDate);
+      return date >= weekStart && date < weekEnd;
+    });
+
+    return {
+      distance: lastWeekActivities.reduce((sum, a) => sum + a.distance, 0),
+      calories: lastWeekActivities.reduce((sum, a) => sum + (a.calories || 0), 0),
+      activities: lastWeekActivities.length,
+      elevation: lastWeekActivities.reduce((sum, a) => sum + (a.totalElevationGain || 0), 0),
+      time: lastWeekActivities.reduce((sum, a) => sum + a.movingTime, 0),
+    };
+  }, [activities]);
+
   // Recent 4 weeks count
   const recent4WeeksCount = useMemo(() => {
     const athleteStats = stats?.athleteStats;
     if (athleteStats) {
       return (athleteStats.recentRideCount || 0) + (athleteStats.recentRunCount || 0);
     }
-    // Fallback to calculating from activities
     const now = new Date();
     const fourWeeksAgo = new Date(now);
     fourWeeksAgo.setDate(now.getDate() - 28);
@@ -184,16 +209,111 @@ export default function DashboardPage() {
     return { avg: avgHR, max: maxHR > 0 ? maxHR : undefined };
   }, [activities]);
 
-  // Total elevation from all activities or athlete stats
-  const totalElevation = useMemo(() => {
-    const athleteStats = stats?.athleteStats;
-    if (athleteStats) {
-      return (
-        (athleteStats.allRideElevationGain || 0) + (athleteStats.allRunElevationGain || 0)
-      );
+  // Total stats from all activities
+  const totalStats = useMemo(() => {
+    return {
+      distance: activities.reduce((sum, a) => sum + a.distance, 0),
+      time: activities.reduce((sum, a) => sum + a.movingTime, 0),
+      elevation: activities.reduce((sum, a) => sum + (a.totalElevationGain || 0), 0),
+      calories: activities.reduce((sum, a) => sum + (a.calories || 0), 0),
+    };
+  }, [activities]);
+
+  // Calculate current streak and days since last activity
+  const streakInfo = useMemo(() => {
+    if (activities.length === 0) {
+      return { currentStreak: 0, longestStreak: 0, daysSinceLastActivity: 999 };
     }
-    return activities.reduce((sum, a) => sum + (a.totalElevationGain || 0), 0);
-  }, [activities, stats]);
+
+    const sortedActivities = [...activities].sort(
+      (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+    );
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const lastActivityDate = new Date(sortedActivities[0].startDate);
+    lastActivityDate.setHours(0, 0, 0, 0);
+
+    const daysSinceLastActivity = Math.floor(
+      (today.getTime() - lastActivityDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    // Calculate streaks
+    const activityDates = new Set(
+      activities.map((a) => new Date(a.startDate).toISOString().split('T')[0])
+    );
+
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let tempStreak = 0;
+    const checkDate = new Date(today);
+
+    // Current streak
+    while (true) {
+      const dateStr = checkDate.toISOString().split('T')[0];
+      if (activityDates.has(dateStr)) {
+        currentStreak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else if (currentStreak === 0) {
+        // Allow checking yesterday if today has no activity
+        checkDate.setDate(checkDate.getDate() - 1);
+        const yesterdayStr = checkDate.toISOString().split('T')[0];
+        if (activityDates.has(yesterdayStr)) {
+          currentStreak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+
+    // Longest streak (simplified)
+    const sortedDates = Array.from(activityDates).sort();
+    for (let i = 0; i < sortedDates.length; i++) {
+      const current = new Date(sortedDates[i]);
+      const prev = i > 0 ? new Date(sortedDates[i - 1]) : null;
+
+      if (prev) {
+        const diffDays = Math.floor(
+          (current.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        if (diffDays === 1) {
+          tempStreak++;
+        } else {
+          tempStreak = 1;
+        }
+      } else {
+        tempStreak = 1;
+      }
+
+      if (tempStreak > longestStreak) {
+        longestStreak = tempStreak;
+      }
+    }
+
+    return { currentStreak, longestStreak, daysSinceLastActivity };
+  }, [activities]);
+
+  // Average activities per week
+  const avgActivitiesPerWeek = useMemo(() => {
+    if (activities.length === 0) return 0;
+    const dates = activities.map((a) => new Date(a.startDate).getTime());
+    const oldest = Math.min(...dates);
+    const newest = Math.max(...dates);
+    const weeks = Math.max(1, (newest - oldest) / (1000 * 60 * 60 * 24 * 7));
+    return activities.length / weeks;
+  }, [activities]);
+
+  // Handle activity click from feed
+  const handleActivityClick = (activity: any) => {
+    const fullActivity = activities.find((a) => a.id === activity.id);
+    if (fullActivity) {
+      setSelectedActivity(fullActivity);
+    }
+  };
 
   if (loading) {
     return (
@@ -218,9 +338,7 @@ export default function DashboardPage() {
         className="flex items-center justify-between mb-6"
       >
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-white">
-            Command Center
-          </h1>
+          <h1 className="text-2xl lg:text-3xl font-bold text-white">Command Center</h1>
           <p className="text-sm text-slate-400">
             {lastSyncTime
               ? `Last sync: ${new Date(lastSyncTime).toLocaleString()}`
@@ -281,27 +399,89 @@ export default function DashboardPage() {
               startDate: a.startDate,
               kudosCount: a.kudosCount,
               city: a.city,
+              totalElevationGain: a.totalElevationGain,
+              averageHeartrate: a.averageHeartrate,
+              averageSpeed: a.averageSpeed,
+              calories: a.calories,
             }))}
             maxItems={4}
+            onActivityClick={handleActivityClick}
           />
           <CalendarHeatmap
             activities={activities.map((a) => ({
+              id: a.id,
+              name: a.name,
               startDate: a.startDate,
               distance: a.distance,
+              type: a.type,
             }))}
             weeks={12}
           />
         </div>
       </motion.div>
 
-      {/* Row 3: Athlete Stats */}
+      {/* Row 3: Weekly Recap + Daily Roast + Week Comparison */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"
+      >
+        <WeeklyRecap thisWeek={weeklyStats} lastWeek={lastWeekStats} />
+        <DailyRoast
+          daysSinceLastActivity={streakInfo.daysSinceLastActivity}
+          totalActivities={activities.length}
+          currentStreak={streakInfo.currentStreak}
+          weeklyDistance={weeklyStats.distance}
+          avgActivitiesPerWeek={avgActivitiesPerWeek}
+          userName={user?.firstName || user?.name}
+        />
+        <WeekComparison
+          thisWeek={{
+            distance: weeklyStats.distance,
+            activities: weeklyStats.activities,
+            time: weeklyStats.time,
+            elevation: weeklyStats.elevation,
+          }}
+          lastWeek={{
+            distance: lastWeekStats.distance,
+            activities: lastWeekStats.activities,
+            time: lastWeekStats.time,
+            elevation: lastWeekStats.elevation,
+          }}
+        />
+      </motion.div>
+
+      {/* Row 4: Fun Stats */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="mb-6"
+      >
+        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+          Fun Facts
+        </h3>
+        <QuickStats
+          totalDistance={totalStats.distance}
+          totalTime={totalStats.time}
+          totalElevation={totalStats.elevation}
+          totalCalories={totalStats.calories}
+          totalActivities={activities.length}
+          longestStreak={streakInfo.longestStreak}
+        />
+      </motion.div>
+
+      {/* Row 5: Athlete Stats */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
       >
         <AthleteStats
-          name={user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || undefined}
+          name={
+            user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || undefined
+          }
           avatarUrl={user?.avatarUrl || undefined}
           sex={user?.sex || undefined}
           city={user?.city || undefined}
@@ -310,7 +490,11 @@ export default function DashboardPage() {
           ftp={user?.stravaFTP || undefined}
           avgHeartRate={heartRateStats.avg}
           maxHeartRate={heartRateStats.max}
-          totalElevation={totalElevation}
+          totalElevation={
+            athleteStats
+              ? (athleteStats.allRideElevationGain || 0) + (athleteStats.allRunElevationGain || 0)
+              : totalStats.elevation
+          }
           longestDistance={longestDistance}
           biggestClimb={biggestClimb}
           followerCount={user?.stravaFollowerCount || undefined}

@@ -32,8 +32,6 @@ function PageContainerComponent({
   return (
     <div className={clsx(
       'min-h-screen w-full',
-      // Top padding for header (desktop)
-      'lg:pt-16',
       // Bottom padding for mobile bottom nav
       'pb-20 lg:pb-0',
       // Background
