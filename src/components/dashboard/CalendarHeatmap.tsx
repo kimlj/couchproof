@@ -277,7 +277,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
   };
 
   return (
-    <GlassCard theme="emerald" className="p-2">
+    <GlassCard theme="emerald" className="p-2.5">
       {/* Header */}
       <div className="flex items-center justify-between mb-1">
         <span className="text-[10px] font-medium text-white">
@@ -305,7 +305,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
 
       {/* Calendar grid */}
       <TooltipProvider>
-        <div className="grid grid-cols-7 gap-px mt-px">
+        <div className="grid grid-cols-7 gap-0.5 mt-0.5">
           {calendarDays.map((day, index) => {
             const hasActivity = day.data && day.data.count > 0;
             const activityCount = day.data?.count || 0;
@@ -340,7 +340,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
                         }
                       }
                     }}
-                    className={`h-5 flex items-center justify-center rounded-sm ${bgClass} ${textClass} ${hasActivity ? 'cursor-pointer hover:ring-1 hover:ring-emerald-400/50' : ''}`}
+                    className={`aspect-square flex items-center justify-center rounded-sm ${bgClass} ${textClass} ${hasActivity ? 'cursor-pointer hover:ring-1 hover:ring-emerald-400/50' : ''}`}
                   >
                     {content}
                   </div>
