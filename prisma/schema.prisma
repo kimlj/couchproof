@@ -1,0 +1,480 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==================== USER ====================
+model User {
+  id                    String    @id @default(cuid())
+  email                 String    @unique
+  name                  String?
+  firstName             String?
+  lastName              String?
+  avatarUrl             String?
+  sex                   String?   // M, F
+  city                  String?
+  state                 String?
+  country               String?
+  measurementPreference String    @default("metric") // metric | imperial
+  timezone              String    @default("UTC")
+  birthday              DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  // Strava connection
+  stravaId              String?   @unique
+  stravaAccessToken     String?
+  stravaRefreshToken    String?
+  stravaTokenExpires    DateTime?
+  stravaConnectedAt     DateTime?
+  stravaScope           String?
+
+  // Strava profile data
+  stravaFollowerCount   Int?
+  stravaFriendCount     Int?
+  stravaFTP             Int?      // Functional Threshold Power
+  stravaWeight          Float?    // kg
+  stravaPremium         Boolean   @default(false)
+  stravaCreatedAt       DateTime?
+
+  // Subscription & Credits
+  tier                  String    @default("free") // free | premium
+  aiCreditsUsed         Int       @default(0)
+  aiCreditsResetAt      DateTime?
+
+  // Last sync info
+  lastStravaSync        DateTime?
+  lastStatsCalculation  DateTime?
+
+  // Relations
+  activities            Activity[]
+  gear                  Gear[]
+  achievements          UserAchievement[]
+  personality           Personality?
+  athleteStats          AthleteStats?
+  zones                 UserZones?
+  aiGenerations         AIGeneration[]
+
+  @@index([stravaId])
+  @@index([email])
+}
+
+// ==================== ATHLETE STATS (from Strava /athletes/{id}/stats) ====================
+model AthleteStats {
+  id                          String    @id @default(cuid())
+  userId                      String    @unique
+  user                        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Records
+  biggestRideDistance         Float?    // meters
+  biggestClimbElevationGain   Float?    // meters
+
+  // Recent (last 4 weeks)
+  recentRideCount             Int       @default(0)
+  recentRideDistance          Float     @default(0)
+  recentRideMovingTime        Int       @default(0)
+  recentRideElevationGain     Float     @default(0)
+  recentRideAchievements      Int       @default(0)
+
+  recentRunCount              Int       @default(0)
+  recentRunDistance           Float     @default(0)
+  recentRunMovingTime         Int       @default(0)
+  recentRunElevationGain      Float     @default(0)
+  recentRunAchievements       Int       @default(0)
+
+  recentSwimCount             Int       @default(0)
+  recentSwimDistance          Float     @default(0)
+  recentSwimMovingTime        Int       @default(0)
+
+  // Year to date
+  ytdRideCount                Int       @default(0)
+  ytdRideDistance             Float     @default(0)
+  ytdRideMovingTime           Int       @default(0)
+  ytdRideElevationGain        Float     @default(0)
+  ytdRideAchievements         Int       @default(0)
+
+  ytdRunCount                 Int       @default(0)
+  ytdRunDistance              Float     @default(0)
+  ytdRunMovingTime            Int       @default(0)
+  ytdRunElevationGain         Float     @default(0)
+  ytdRunAchievements          Int       @default(0)
+
+  ytdSwimCount                Int       @default(0)
+  ytdSwimDistance             Float     @default(0)
+  ytdSwimMovingTime           Int       @default(0)
+
+  // All time
+  allRideCount                Int       @default(0)
+  allRideDistance             Float     @default(0)
+  allRideMovingTime           Int       @default(0)
+  allRideElevationGain        Float     @default(0)
+  allRideAchievements         Int       @default(0)
+
+  allRunCount                 Int       @default(0)
+  allRunDistance              Float     @default(0)
+  allRunMovingTime            Int       @default(0)
+  allRunElevationGain         Float     @default(0)
+  allRunAchievements          Int       @default(0)
+
+  allSwimCount                Int       @default(0)
+  allSwimDistance             Float     @default(0)
+  allSwimMovingTime           Int       @default(0)
+
+  lastUpdated                 DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// ==================== USER ZONES ====================
+model UserZones {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Heart rate zones
+  hrCustomZones         Boolean   @default(false)
+  hrZone1Min            Int?
+  hrZone1Max            Int?
+  hrZone2Min            Int?
+  hrZone2Max            Int?
+  hrZone3Min            Int?
+  hrZone3Max            Int?
+  hrZone4Min            Int?
+  hrZone4Max            Int?
+  hrZone5Min            Int?
+  hrZone5Max            Int?
+
+  // Power zones (cycling)
+  powerZone1Min         Int?
+  powerZone1Max         Int?
+  powerZone2Min         Int?
+  powerZone2Max         Int?
+  powerZone3Min         Int?
+  powerZone3Max         Int?
+  powerZone4Min         Int?
+  powerZone4Max         Int?
+  powerZone5Min         Int?
+  powerZone5Max         Int?
+  powerZone6Min         Int?
+  powerZone6Max         Int?
+  powerZone7Min         Int?
+  powerZone7Max         Int?
+
+  lastUpdated           DateTime  @default(now())
+}
+
+// ==================== GEAR ====================
+model Gear {
+  id              String    @id @default(cuid())
+
+  // Strava fields
+  stravaId        String    @unique
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type            String    // bike | shoe
+  name            String
+  brandName       String?
+  modelName       String?
+  description     String?
+  frameType       Int?      // For bikes: 1=MTB, 2=Cross, 3=Road, 4=TT
+  distance        Float     @default(0) // meters
+  primary         Boolean   @default(false)
+  retired         Boolean   @default(false)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  activities      Activity[]
+
+  @@index([userId])
+  @@index([stravaId])
+}
+
+// ==================== ACTIVITY ====================
+model Activity {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Source
+  source                String    // "strava" | "gpx"
+  stravaId              String?   // Strava activity ID
+  uploadId              String?
+  externalId            String?
+
+  // Basic info
+  name                  String
+  description           String?
+  type                  String    // Run, Ride, Hike, Swim, Walk, etc.
+  sportType             String?   // TrailRun, MountainBikeRide, etc.
+  workoutType           Int?
+
+  // Timestamps
+  startDate             DateTime
+  startDateLocal        DateTime
+  timezone              String?
+
+  // Core metrics
+  distance              Float     // meters
+  movingTime            Int       // seconds
+  elapsedTime           Int       // seconds
+  totalElevationGain    Float?    // meters
+  totalElevationLoss    Float?    // meters (calculated from streams)
+  elevHigh              Float?    // meters
+  elevLow               Float?    // meters
+
+  // Speed/Pace
+  averageSpeed          Float?    // m/s
+  maxSpeed              Float?    // m/s
+
+  // Heart Rate
+  averageHeartrate      Float?
+  maxHeartrate          Float?
+  hasHeartrate          Boolean   @default(false)
+
+  // Power (cycling)
+  averageWatts          Float?
+  maxWatts              Int?
+  weightedAverageWatts  Int?      // Normalized Power
+  deviceWatts           Boolean   @default(false) // true = power meter
+  kilojoules            Float?
+
+  // Cadence
+  averageCadence        Float?
+
+  // Temperature
+  averageTemp           Float?    // Celsius
+
+  // Location
+  startLat              Float?
+  startLng              Float?
+  endLat                Float?
+  endLng                Float?
+  city                  String?
+  state                 String?
+  country               String?
+
+  // Map data
+  summaryPolyline       String?   // Encoded polyline
+  polyline              String?   // Detailed polyline
+
+  // Social/Strava
+  kudosCount            Int       @default(0)
+  commentCount          Int       @default(0)
+  athleteCount          Int       @default(1) // Group activity
+  photoCount            Int       @default(0)
+  totalPhotoCount       Int       @default(0)
+  hasKudoed             Boolean   @default(false)
+
+  // Flags
+  trainer               Boolean   @default(false)
+  commute               Boolean   @default(false)
+  manual                Boolean   @default(false)
+  private               Boolean   @default(false)
+  flagged               Boolean   @default(false)
+  hideFromHome          Boolean   @default(false)
+
+  // Device
+  deviceName            String?
+  embedToken            String?
+
+  // Gear
+  gearId                String?
+  gear                  Gear?     @relation(fields: [gearId], references: [id])
+
+  // Calories & Suffer
+  calories              Float?
+  sufferScore           Int?
+
+  // Achievements in this activity
+  achievementCount      Int       @default(0)
+  prCount               Int       @default(0)
+
+  // Weather (fetched separately)
+  weatherTemp           Float?
+  weatherCondition      String?
+  weatherHumidity       Float?
+  weatherWind           Float?
+
+  // Splits (for runs) - stored as JSON
+  splitsMetric          Json?     // Array of split objects
+  splitsStandard        Json?
+
+  // Laps - stored as JSON
+  laps                  Json?     // Array of lap objects
+
+  // Best efforts (runs) - stored as JSON
+  bestEfforts           Json?     // Array of best effort objects
+
+  // Segment efforts - stored as JSON
+  segmentEfforts        Json?     // Array of segment effort objects
+  segmentEffortCount    Int       @default(0)
+
+  // Detailed streams - stored as JSON
+  streams               Json?     // { time, distance, latlng, altitude, heartrate, cadence, watts, temp, velocity_smooth, grade_smooth, moving }
+  hasStreams            Boolean   @default(false)
+
+  // Stream analysis (calculated)
+  streamAnalysis        Json?     // Calculated metrics from streams
+
+  // AI Generated content
+  aiSummary             String?   @db.Text
+  aiSummaryGeneratedAt  DateTime?
+  aiNarrative           String?
+  aiNarrativeStyle      String?
+  aiNarrativeGeneratedAt DateTime?
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([userId, source, stravaId])
+  @@index([userId, startDate])
+  @@index([userId, type])
+  @@index([stravaId])
+}
+
+// ==================== PERSONALITY ====================
+model Personality {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // === TIMING TRAITS (0-100) ===
+  dawnWarrior           Int       @default(0)
+  nightOwl              Int       @default(0)
+  weekendWarrior        Int       @default(0)
+
+  // === EFFORT TRAITS ===
+  steadyEddy            Int       @default(0)
+  surgeMaster           Int       @default(0)
+  elevationJunkie       Int       @default(0)
+  speedDemon            Int       @default(0)
+  enduranceKing         Int       @default(0)
+
+  // === CONSISTENCY TRAITS ===
+  streakMachine         Int       @default(0)
+  burstMode             Int       @default(0)
+  improver              Int       @default(0)
+
+  // === STYLE TRAITS ===
+  explorer              Int       @default(0)
+  homeBody              Int       @default(0)
+  segmentHunter         Int       @default(0)
+
+  // === SOCIAL TRAITS ===
+  socialButterfly       Int       @default(0)
+  loneWolf              Int       @default(0)
+
+  // === GEAR TRAITS ===
+  gearHead              Int       @default(0)
+  minimalist            Int       @default(0)
+  shoeDestroyer         Int       @default(0)
+
+  // === HR/POWER TRAITS ===
+  heartrateSandbagger   Int       @default(0)
+  redlineAddict         Int       @default(0)
+  wattBazooka           Int       @default(0)
+  dieselEngine          Int       @default(0)
+
+  // Primary traits (top 3-4)
+  primaryTraits         String[]
+
+  // Archetype
+  archetype             String?   // "dawn-warrior", "weekend-warrior", etc.
+  archetypeEmoji        String?
+
+  // AI-generated profile
+  profileSummary        String?
+  strengths             String[]
+  growthAreas           String[]
+  funFacts              String[]
+  spiritAnimal          String?
+  spiritAnimalEmoji     String?
+  spiritAnimalReason    String?
+  compatibility         String?
+
+  lastCalculatedAt      DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+// ==================== ACHIEVEMENTS ====================
+model Achievement {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  name            String
+  description     String
+  icon            String    // Emoji
+  category        String    // "milestone", "quirky", "streak", "couchproof"
+  tier            String    @default("bronze") // bronze, silver, gold
+  requirement     Json      // { type: "total_distance", value: 100000, unit: "meters" }
+  sortOrder       Int       @default(0)
+
+  users           UserAchievement[]
+}
+
+model UserAchievement {
+  id              String      @id @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId   String
+  achievement     Achievement @relation(fields: [achievementId], references: [id])
+
+  unlockedAt      DateTime    @default(now())
+  activityId      String?     // Activity that triggered it
+  notified        Boolean     @default(false)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+// ==================== AI GENERATIONS ====================
+model AIGeneration {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type                  String    // "roast", "hype", "narrative", "personality", "summary"
+  style                 String?   // Which style was used
+  activityId            String?   // For narratives and summaries
+
+  // Input context (for debugging/analysis)
+  inputContext          Json?     // Subset of stats used
+
+  // Output
+  prompt                String    @db.Text
+  response              String    @db.Text
+
+  // For repetition avoidance
+  keyPhrasesUsed        String[]
+  dataPointsReferenced  String[]
+
+  // Usage
+  tokensUsed            Int?
+  modelUsed             String?
+
+  createdAt             DateTime  @default(now())
+
+  @@index([userId, type, createdAt])
+}
+
+// ==================== CALCULATED STATS CACHE ====================
+model UserStatsCache {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+
+  // Full calculated stats object
+  stats                 Json      // The complete UserStatsForAI object
+
+  // Version for cache invalidation
+  version               Int       @default(1)
+  lastCalculatedAt      DateTime  @default(now())
+
+  @@index([userId])
+}

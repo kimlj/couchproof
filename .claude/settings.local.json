@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(npx create-next-app:*)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest init -d)",
+      "Bash(npx shadcn@latest add button card dialog dropdown-menu input progress skeleton tabs toast -y)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npx prisma init)",
+      "Bash(npm run build:*)",
+      "Bash(npx prisma generate)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(set DEBUG=prisma:*)",
+      "Bash(Remove-Item -Recurse -Force -ErrorAction SilentlyContinue \".next\")",
+      "Bash(if exist .next rmdir /s /q .next)",
+      "Bash(npx tsc:*)",
+      "WebSearch",
+      "Bash(powershell -Command:*)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(rm:*)",
+      "Bash(git -C C:/Users/kimju/Documents/couchproof add -A)",
+      "Bash(git -C C:/Users/kimju/Documents/couchproof status)"
+    ]
+  }
+}
