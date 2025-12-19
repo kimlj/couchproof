@@ -388,7 +388,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Right Column: Feed + Calendar */}
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           <StravaFeed
             activities={activities.slice(0, 4).map((a) => ({
               id: a.id,
@@ -407,21 +407,25 @@ export default function DashboardPage() {
             maxItems={4}
             onActivityClick={handleActivityClick}
           />
-          <CalendarHeatmap
-            activities={activities.map((a) => ({
-              id: a.id,
-              name: a.name,
-              startDate: a.startDate,
-              distance: a.distance,
-              type: a.type,
-            }))}
-            onActivityClick={(activityId) => {
-              const activity = activities.find((a) => a.id === activityId);
-              if (activity) {
-                setSelectedActivity(activity);
-              }
-            }}
-          />
+          <div className="flex-1">
+            <CalendarHeatmap
+              activities={activities.map((a) => ({
+                id: a.id,
+                name: a.name,
+                startDate: a.startDate,
+                distance: a.distance,
+                movingTime: a.movingTime,
+                type: a.type,
+              }))}
+              onActivityClick={(activityId) => {
+                const activity = activities.find((a) => a.id === activityId);
+                if (activity) {
+                  setSelectedActivity(activity);
+                }
+              }}
+              className="h-full"
+            />
+          </div>
         </div>
       </motion.div>
 

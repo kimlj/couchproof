@@ -76,6 +76,43 @@ export function RouteMap({ polyline, activityName, distance, className }: RouteM
           document.head.appendChild(link);
         }
 
+        // Add custom zoom control styles
+        if (!document.getElementById('leaflet-custom-css')) {
+          const style = document.createElement('style');
+          style.id = 'leaflet-custom-css';
+          style.textContent = `
+            .leaflet-control-zoom {
+              border: none !important;
+              border-radius: 8px !important;
+              overflow: hidden;
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+            }
+            .leaflet-control-zoom a {
+              background: rgba(15, 23, 42, 0.9) !important;
+              color: #22d3ee !important;
+              border: none !important;
+              width: 32px !important;
+              height: 32px !important;
+              line-height: 32px !important;
+              font-size: 16px !important;
+              font-weight: 600 !important;
+              transition: all 0.2s ease !important;
+            }
+            .leaflet-control-zoom a:hover {
+              background: rgba(30, 41, 59, 0.95) !important;
+              color: #67e8f9 !important;
+            }
+            .leaflet-control-zoom-in {
+              border-radius: 8px 8px 0 0 !important;
+              border-bottom: 1px solid rgba(51, 65, 85, 0.5) !important;
+            }
+            .leaflet-control-zoom-out {
+              border-radius: 0 0 8px 8px !important;
+            }
+          `;
+          document.head.appendChild(style);
+        }
+
         if (mapInstanceRef.current) {
           mapInstanceRef.current.remove();
         }
@@ -90,10 +127,13 @@ export function RouteMap({ polyline, activityName, distance, className }: RouteM
 
         // Create map
         const map = L.map(mapRef.current!, {
-          zoomControl: false,
+          zoomControl: true,
           attributionControl: false,
           dragging: true,
-          scrollWheelZoom: false,
+          scrollWheelZoom: true,
+          doubleClickZoom: true,
+          touchZoom: true,
+          boxZoom: true,
         });
 
         mapInstanceRef.current = map;

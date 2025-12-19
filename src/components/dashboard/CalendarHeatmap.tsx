@@ -14,12 +14,14 @@ interface ActivityDay {
   date: string;
   count: number;
   distance: number;
+  movingTime: number;
   types: string[];
   activities: Array<{
     id: string;
     name: string;
     type: string;
     distance: number;
+    movingTime: number;
   }>;
 }
 
@@ -29,10 +31,12 @@ interface CalendarHeatmapProps {
     name: string;
     startDate: string;
     distance: number;
+    movingTime: number;
     type: string;
   }>;
   onDayClick?: (date: string, activities: ActivityDay['activities']) => void;
   onActivityClick?: (activityId: string) => void;
+  className?: string;
 }
 
 // Comprehensive activity type mapping
@@ -127,10 +131,20 @@ function formatDistance(meters: number): string {
   return `${km.toFixed(1)} km`;
 }
 
+function formatDuration(seconds: number): string {
+  if (seconds === 0) return '';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
+}
+
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: CalendarHeatmapProps) {
+export function CalendarHeatmap({ activities, onDayClick, onActivityClick, className }: CalendarHeatmapProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const { calendarDays, activityMap, monthStats, currentStreak } = useMemo(() => {
@@ -143,6 +157,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
       if (existing) {
         existing.count += 1;
         existing.distance += activity.distance;
+        existing.movingTime += activity.movingTime;
         if (!existing.types.includes(activity.type)) {
           existing.types.push(activity.type);
         }
@@ -151,18 +166,21 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
           name: activity.name,
           type: activity.type,
           distance: activity.distance,
+          movingTime: activity.movingTime,
         });
       } else {
         activityMap.set(date, {
           date,
           count: 1,
           distance: activity.distance,
+          movingTime: activity.movingTime,
           types: [activity.type],
           activities: [{
             id: activity.id,
             name: activity.name,
             type: activity.type,
             distance: activity.distance,
+            movingTime: activity.movingTime,
           }],
         });
       }
@@ -277,9 +295,9 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
   };
 
   return (
-    <GlassCard theme="emerald" className="p-2">
+    <GlassCard theme="emerald" className={`p-2 flex flex-col ${className || ''}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-1 flex-shrink-0">
         <span className="text-[10px] font-medium text-white">
           {currentStreak > 0 && <span className="text-orange-400">🔥{currentStreak}</span>}
         </span>
@@ -288,7 +306,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
             <ChevronLeft className="w-3 h-3 text-slate-400" />
           </button>
           <button onClick={goToToday} className="px-1 text-[9px] text-slate-400 hover:text-white">
-            {MONTHS[currentDate.getMonth()].slice(0, 3)}
+            {MONTHS[currentDate.getMonth()].slice(0, 3)} {currentDate.getFullYear()}
           </button>
           <button onClick={goToNextMonth} className="p-0.5 hover:bg-slate-800/50 rounded">
             <ChevronRight className="w-3 h-3 text-slate-400" />
@@ -297,7 +315,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
       </div>
 
       {/* Day headers */}
-      <div className="grid grid-cols-7 gap-px">
+      <div className="grid grid-cols-7 gap-px flex-shrink-0">
         {DAYS.map((day) => (
           <div key={day} className="text-center text-[7px] text-slate-600">{day.charAt(0)}</div>
         ))}
@@ -305,15 +323,20 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
 
       {/* Calendar grid */}
       <TooltipProvider>
-        <div className="grid grid-cols-7 gap-px mt-px">
+        <div className="grid grid-cols-7 grid-rows-6 gap-[3px] mt-px flex-1">
           {calendarDays.map((day, index) => {
             const hasActivity = day.data && day.data.count > 0;
             const activityCount = day.data?.count || 0;
             const types = day.data?.types || [];
 
+            // Hide cells for days outside current month
+            if (!day.isCurrentMonth) {
+              return <div key={index} className="min-h-[20px]" />;
+            }
+
             let content: React.ReactNode = <span className="text-[7px]">{day.day}</span>;
-            let bgClass = day.isCurrentMonth ? 'bg-slate-800/40' : 'bg-slate-800/20';
-            let textClass = day.isCurrentMonth ? 'text-slate-500' : 'text-slate-700';
+            let bgClass = 'bg-slate-800/40';
+            let textClass = 'text-slate-500';
 
             if (day.isToday) {
               bgClass = 'bg-cyan-500/30 ring-1 ring-cyan-500/50';
@@ -340,22 +363,43 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
                         }
                       }
                     }}
-                    className={`h-5 flex items-center justify-center rounded-sm ${bgClass} ${textClass} ${hasActivity ? 'cursor-pointer hover:ring-1 hover:ring-emerald-400/50' : ''}`}
+                    className={`min-h-[20px] flex items-center justify-center rounded-sm ${bgClass} ${textClass} ${hasActivity ? 'cursor-pointer hover:ring-1 hover:ring-emerald-400/50' : ''}`}
                   >
                     {content}
                   </div>
                 </TooltipTrigger>
                 {hasActivity && day.data && (
-                  <TooltipContent side="top" className="bg-slate-900/95 border-slate-700/50 p-2 z-[100]">
-                    <p className="text-[10px] font-medium text-white mb-1">
+                  <TooltipContent side="top" className="bg-slate-900/95 border-slate-700/50 p-3 z-[100]">
+                    <p className="text-[11px] font-medium text-white mb-2">
                       {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </p>
+                    {/* Stats summary */}
+                    <div className="flex gap-3 mb-2 pb-2 border-b border-slate-700/50">
+                      {day.data.distance > 0 && (
+                        <div className="text-center">
+                          <p className="text-[10px] text-slate-500">Distance</p>
+                          <p className="text-[11px] font-semibold text-cyan-400">{formatDistance(day.data.distance)}</p>
+                        </div>
+                      )}
+                      {day.data.movingTime > 0 && (
+                        <div className="text-center">
+                          <p className="text-[10px] text-slate-500">Time</p>
+                          <p className="text-[11px] font-semibold text-emerald-400">{formatDuration(day.data.movingTime)}</p>
+                        </div>
+                      )}
+                      <div className="text-center">
+                        <p className="text-[10px] text-slate-500">Activities</p>
+                        <p className="text-[11px] font-semibold text-orange-400">{day.data.count}</p>
+                      </div>
+                    </div>
+                    {/* Activity list */}
                     <div className="space-y-1 max-h-24 overflow-y-auto">
                       {day.data.activities.map((act, i) => (
                         <div key={i} onClick={(e) => { e.stopPropagation(); onActivityClick?.(act.id); }}
                           className="flex items-center gap-1.5 text-[10px] p-0.5 rounded hover:bg-slate-800/50 cursor-pointer">
                           <span>{getActivityEmoji(act.type)}</span>
                           <span className="text-slate-300 truncate max-w-[100px]">{act.name}</span>
+                          {act.distance > 0 && <span className="text-slate-500 text-[9px]">{formatDistance(act.distance)}</span>}
                         </div>
                       ))}
                     </div>
@@ -368,7 +412,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick }: Cal
       </TooltipProvider>
 
       {/* Footer */}
-      <div className="flex justify-between mt-1 text-[8px] text-slate-600">
+      <div className="flex justify-between mt-1 text-[12px] text-slate-500 flex-shrink-0">
         <span>{monthStats.activeDays}d</span>
         <span>{monthStats.activities} 💪</span>
       </div>
