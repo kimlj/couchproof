@@ -377,7 +377,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick, class
                   </div>
                 </TooltipTrigger>
                 {hasActivity && day.data && (
-                  <TooltipContent side="top" className="bg-slate-900/95 border-slate-700/50 p-3 z-[100]">
+                  <TooltipContent side="top" className="bg-slate-900/95 backdrop-blur-xl border border-emerald-500/30 rounded-lg p-3 shadow-[0_0_15px_rgba(16,185,129,0.15)] z-[100]">
                     <p className="text-[11px] font-medium text-white mb-2">
                       {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </p>
