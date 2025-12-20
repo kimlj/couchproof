@@ -247,9 +247,12 @@ export default function DashboardPage() {
     // Total kilojoules (power output)
     const totalKilojoules = activities.reduce((sum, a) => sum + (a.kilojoules || 0), 0);
 
-    // Max speed ever recorded (m/s -> km/h)
-    const maxSpeedMs = Math.max(...activities.map((a) => a.maxSpeed || 0), 0);
-    const maxSpeedKmh = maxSpeedMs * 3.6;
+    // Max running speed ever recorded (m/s -> km/h) - only from runs
+    const runActivities = activities.filter((a) =>
+      a.type === 'Run' || a.sportType?.includes('Run')
+    );
+    const maxRunSpeedMs = Math.max(...runActivities.map((a) => a.maxSpeed || 0), 0);
+    const maxRunSpeedKmh = maxRunSpeedMs * 3.6;
 
     return {
       totalKudos,
@@ -257,7 +260,7 @@ export default function DashboardPage() {
       nightOwlCount,
       totalHeartbeats: Math.round(totalHeartbeats),
       totalKilojoules,
-      maxSpeedKmh,
+      maxRunSpeedKmh,
     };
   }, [activities]);
 
@@ -524,7 +527,7 @@ export default function DashboardPage() {
           nightOwlCount={funFactsStats.nightOwlCount}
           totalHeartbeats={funFactsStats.totalHeartbeats}
           totalKilojoules={funFactsStats.totalKilojoules}
-          maxSpeedKmh={funFactsStats.maxSpeedKmh}
+          maxRunSpeedKmh={funFactsStats.maxRunSpeedKmh}
         />
       </motion.div>
 

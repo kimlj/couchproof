@@ -34,7 +34,7 @@ interface QuickStatsProps {
   nightOwlCount: number;
   totalHeartbeats: number;
   totalKilojoules: number;
-  maxSpeedKmh: number;
+  maxRunSpeedKmh: number;
 }
 
 interface FunStat {
@@ -88,7 +88,7 @@ export function QuickStats(props: QuickStatsProps) {
       nightOwlCount,
       totalHeartbeats,
       totalKilojoules,
-      maxSpeedKmh,
+      maxRunSpeedKmh,
     } = props;
 
     // Distance equivalents
@@ -146,15 +146,15 @@ export function QuickStats(props: QuickStatsProps) {
       });
     }
 
-    // Speed - Animal comparison
-    if (maxSpeedKmh > 0) {
-      const comparison = getAnimalComparison(maxSpeedKmh);
+    // Speed - Animal comparison (running only)
+    if (maxRunSpeedKmh > 0) {
+      const comparison = getAnimalComparison(maxRunSpeedKmh);
       if (comparison) {
         stats.push({
           icon: Gauge,
           label: 'Faster Than',
           value: comparison.animal,
-          description: `Your top speed: ${maxSpeedKmh.toFixed(1)} km/h`,
+          description: `Top running speed: ${maxRunSpeedKmh.toFixed(1)} km/h`,
           theme: 'orange',
           bgEmoji: comparison.emoji,
         });
