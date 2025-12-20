@@ -41,7 +41,9 @@
       "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"Fix batchLimit reference error - remove unused batch logic\")",
       "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"Change Pizzas Burned to Pizza Slices \\(285 cal per slice\\)\")",
       "Bash(git -C C:/Users/kimju/Documents/couchproof diff --stat)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(git -C C:/Users/kimju/Documents/couchproof diff src/components/layout/Sidebar.tsx)",
+      "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"Update sidebar logo - white sofa icon with bold italic COUCHPROOF text\")"
     ]
   }
 }

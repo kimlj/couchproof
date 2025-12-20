@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, Activity, Brain, Trophy, Settings, LogOut } from 'lucide-react';
+import { Home, Activity, Brain, Trophy, Settings, LogOut, Sofa } from 'lucide-react';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
 
@@ -85,12 +85,10 @@ export default function Sidebar({ user, onLogout, isOpen = false, onClose }: Sid
 
         <div className="relative h-full flex flex-col">
           {/* Logo */}
-          <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-800/50">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 via-purple-500 to-pink-500 flex items-center justify-center">
-              <span className="text-white font-bold">CP</span>
-            </div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-              Couchproof
+          <div className="h-16 flex items-center gap-3 px-6">
+            <Sofa className="w-7 h-7 text-white" />
+            <h1 className="text-xl font-bold text-white tracking-wide italic">
+              COUCHPROOF
             </h1>
           </div>
 
