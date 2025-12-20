@@ -12,8 +12,10 @@ import { getActivities, getActivity, getActivityStreams } from '@/lib/strava/api
 interface SyncResult {
   synced: number;
   updated: number;
+  skipped: number;
   errors: number;
   lastActivityDate?: string;
+  rateLimited?: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -49,9 +51,11 @@ export async function POST(request: NextRequest) {
     // Get valid access token (will refresh if needed)
     const accessToken = await getValidToken(user.id);
 
-    // Check if full sync is requested (re-fetches all activities with detailed data)
+    // Check sync options
     const searchParams = request.nextUrl.searchParams;
     const fullSync = searchParams.get('full') === 'true';
+    // Batch limit to avoid rate limits (default 30 for full sync, unlimited for regular)
+    const batchLimit = parseInt(searchParams.get('limit') || (fullSync ? '30' : '0'));
 
     // Calculate sync start time
     // Full sync: last 365 days, Regular sync: since last sync or last 30 days
@@ -64,8 +68,11 @@ export async function POST(request: NextRequest) {
     const result: SyncResult = {
       synced: 0,
       updated: 0,
+      skipped: 0,
       errors: 0,
     };
+
+    let processedCount = 0;
 
     // Fetch activities from Strava (paginated)
     let page = 1;
@@ -86,26 +93,56 @@ export async function POST(request: NextRequest) {
 
       // Process each activity
       for (const activitySummary of activities) {
+        // Check batch limit
+        if (batchLimit > 0 && processedCount >= batchLimit) {
+          result.rateLimited = true;
+          hasMore = false;
+          break;
+        }
+
         try {
-          // Fetch detailed activity data (includes calories, kilojoules, etc.)
-          const activity = await getActivity(accessToken, activitySummary.id).catch(() => activitySummary);
-
-          // Fetch streams for this activity
-          const streams = await getActivityStreams(
-            accessToken,
-            activitySummary.id
-          ).catch(() => null);
-
-          // Check if activity already exists
+          // Check if activity already exists and has detailed data
           const existing = await prisma.activity.findUnique({
             where: {
               userId_source_stravaId: {
                 userId: user.id,
                 source: 'strava',
-                stravaId: activity.id.toString(),
+                stravaId: activitySummary.id.toString(),
               },
             },
+            select: {
+              id: true,
+              calories: true,
+              hasStreams: true,
+            },
           });
+
+          // Skip if already has complete data (calories and streams)
+          const needsDetailedData = !existing?.calories;
+          const needsStreams = !existing?.hasStreams;
+
+          if (existing && !needsDetailedData && !needsStreams) {
+            result.skipped++;
+            continue;
+          }
+
+          // Fetch detailed activity data only if needed
+          let activity = activitySummary;
+          if (needsDetailedData) {
+            activity = await getActivity(accessToken, activitySummary.id).catch(() => activitySummary);
+            // Rate limit delay after API call
+            await new Promise((resolve) => setTimeout(resolve, 200));
+          }
+
+          // Fetch streams only if needed
+          let streams = null;
+          if (needsStreams) {
+            streams = await getActivityStreams(accessToken, activitySummary.id).catch(() => null);
+            // Rate limit delay after API call
+            await new Promise((resolve) => setTimeout(resolve, 200));
+          }
+
+          processedCount++;
 
           const activityData = {
             userId: user.id,
@@ -240,19 +277,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update user's last sync time
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastStravaSync: new Date() },
-    });
+    // Only update last sync time if not doing a batched full sync (to allow continuation)
+    if (!fullSync || !result.rateLimited) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastStravaSync: new Date() },
+      });
+    }
 
     return NextResponse.json({
       success: true,
       fullSync,
       synced: result.synced,
       updated: result.updated,
+      skipped: result.skipped,
       errors: result.errors,
+      processed: processedCount,
+      batchLimit: batchLimit || 'unlimited',
+      hasMore: result.rateLimited || false,
       lastActivityDate: result.lastActivityDate,
+      message: result.rateLimited
+        ? `Processed ${processedCount} activities. Run again to continue.`
+        : `Sync complete. ${result.synced} new, ${result.updated} updated, ${result.skipped} skipped.`,
     });
   } catch (error) {
     console.error('Sync error:', error);
