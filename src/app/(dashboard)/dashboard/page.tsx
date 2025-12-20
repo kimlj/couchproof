@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import PageContainer from '@/components/layout/PageContainer';
 import { ActivityDetailModal } from '@/components/activities/ActivityDetailModal';
-import { WeeklyStatsRow } from '@/components/dashboard/WeeklyStatsRow';
 import { RouteMap } from '@/components/dashboard/RouteMap';
 import { StravaFeed } from '@/components/dashboard/StravaFeed';
 import { CalendarHeatmap } from '@/components/dashboard/CalendarHeatmap';
@@ -353,38 +352,23 @@ export default function DashboardPage() {
 
   return (
     <PageContainer>
-      {/* Header */}
+      {/* Header - Sync Button Only */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-6"
+        className="flex justify-end mb-6"
       >
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-white">The Proof</h1>
-          <p className="text-sm text-slate-400">
-            {lastSyncTime
-              ? `Synced ${new Date(lastSyncTime).toLocaleDateString()}`
-              : "Evidence you're not a couch potato"}
-          </p>
-        </div>
-        <SyncButton />
+        <SyncButton lastSyncTime={lastSyncTime} />
       </motion.div>
 
-      {/* Row 1: Weekly Stats */}
+      {/* Row 1: Performance Charts */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
         className="mb-6"
       >
-        <WeeklyStatsRow
-          weeklyDistance={weeklyStats.distance}
-          weeklyCalories={weeklyStats.calories}
-          weeklyActivities={weeklyStats.activities}
-          weeklyElevation={weeklyStats.elevation}
-          weeklyTime={weeklyStats.time}
-          recentActivities4Weeks={recent4WeeksCount}
-        />
+        <ChartsRow activities={activities} />
       </motion.div>
 
       {/* Row 2: Map + Feed + Calendar */}
@@ -450,20 +434,7 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Row 3: Performance Charts */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-        className="mb-6"
-      >
-        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-          Performance Insights
-        </h3>
-        <ChartsRow activities={activities} />
-      </motion.div>
-
-      {/* Row 4: Weekly Recap + Daily Roast + Week Comparison */}
+      {/* Row 3: Weekly Recap + Daily Roast + Week Comparison */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -495,7 +466,7 @@ export default function DashboardPage() {
         />
       </motion.div>
 
-      {/* Row 5: Fun Stats */}
+      {/* Row 4: Fun Stats */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -521,7 +492,7 @@ export default function DashboardPage() {
         />
       </motion.div>
 
-      {/* Row 6: Athlete Stats */}
+      {/* Row 5: Athlete Stats */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

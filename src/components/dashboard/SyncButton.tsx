@@ -3,7 +3,26 @@
 import { useState } from 'react';
 import { RefreshCw, Check, AlertCircle } from 'lucide-react';
 
-export function SyncButton() {
+interface SyncButtonProps {
+  lastSyncTime?: string | null;
+}
+
+function formatLastSync(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+export function SyncButton({ lastSyncTime }: SyncButtonProps) {
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +50,14 @@ export function SyncButton() {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
+      {/* Last synced time */}
+      {lastSyncTime && !syncing && !status && !error && (
+        <span className="text-xs text-slate-500">
+          Last synced {formatLastSync(lastSyncTime)}
+        </span>
+      )}
+
       {/* Status indicator */}
       {syncing && (
         <span className="text-xs text-cyan-400 animate-pulse">
