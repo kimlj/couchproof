@@ -39,6 +39,7 @@ type ActivityData = {
   commentCount?: number;
   achievementCount?: number;
   prCount?: number;
+  kilojoules?: number;
   description?: string;
   city?: string;
   state?: string;
@@ -217,6 +218,46 @@ export default function DashboardPage() {
       time: activities.reduce((sum, a) => sum + a.movingTime, 0),
       elevation: activities.reduce((sum, a) => sum + (a.totalElevationGain || 0), 0),
       calories: activities.reduce((sum, a) => sum + (a.calories || 0), 0),
+    };
+  }, [activities]);
+
+  // Fun facts stats
+  const funFactsStats = useMemo(() => {
+    // Total kudos collected
+    const totalKudos = activities.reduce((sum, a) => sum + (a.kudosCount || 0), 0);
+
+    // Early bird (before 6am) and Night owl (after 6pm) activities
+    let earlyBirdCount = 0;
+    let nightOwlCount = 0;
+    activities.forEach((a) => {
+      const dateStr = a.startDateLocal || a.startDate;
+      const hour = new Date(dateStr).getHours();
+      if (hour < 6) earlyBirdCount++;
+      if (hour >= 18) nightOwlCount++;
+    });
+
+    // Total heartbeats during exercise (avg HR * time in minutes)
+    let totalHeartbeats = 0;
+    activities.forEach((a) => {
+      if (a.averageHeartrate && a.movingTime) {
+        totalHeartbeats += a.averageHeartrate * (a.movingTime / 60);
+      }
+    });
+
+    // Total kilojoules (power output)
+    const totalKilojoules = activities.reduce((sum, a) => sum + (a.kilojoules || 0), 0);
+
+    // Max speed ever recorded (m/s -> km/h)
+    const maxSpeedMs = Math.max(...activities.map((a) => a.maxSpeed || 0), 0);
+    const maxSpeedKmh = maxSpeedMs * 3.6;
+
+    return {
+      totalKudos,
+      earlyBirdCount,
+      nightOwlCount,
+      totalHeartbeats: Math.round(totalHeartbeats),
+      totalKilojoules,
+      maxSpeedKmh,
     };
   }, [activities]);
 
@@ -478,6 +519,12 @@ export default function DashboardPage() {
           totalCalories={totalStats.calories}
           totalActivities={activities.length}
           longestStreak={streakInfo.longestStreak}
+          totalKudos={funFactsStats.totalKudos}
+          earlyBirdCount={funFactsStats.earlyBirdCount}
+          nightOwlCount={funFactsStats.nightOwlCount}
+          totalHeartbeats={funFactsStats.totalHeartbeats}
+          totalKilojoules={funFactsStats.totalKilojoules}
+          maxSpeedKmh={funFactsStats.maxSpeedKmh}
         />
       </motion.div>
 
