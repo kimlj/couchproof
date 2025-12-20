@@ -27,38 +27,53 @@ function LoadingOverlay() {
       className="fixed inset-0 z-50 flex items-center justify-center"
     >
       <div className="flex flex-col items-center gap-4">
-        {/* Activity Rings */}
+        {/* Activity Rings - Continuous Rotation */}
         <div className="relative w-16 h-16">
           {/* Outer ring - Move (cyan) */}
-          <svg className="absolute inset-0 w-16 h-16 -rotate-90">
+          <svg className="absolute inset-0 w-16 h-16">
             <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(6, 182, 212, 0.15)" strokeWidth="5" />
-            <motion.circle
+          </svg>
+          <motion.svg
+            className="absolute inset-0 w-16 h-16"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+          >
+            <circle
               cx="32" cy="32" r="28" fill="none" stroke="url(#cyan-gradient)" strokeWidth="5" strokeLinecap="round"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: [0, 0.75, 0.75, 0] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+              strokeDasharray="132" strokeDashoffset="44"
             />
-          </svg>
+          </motion.svg>
+
           {/* Middle ring - Exercise (pink) */}
-          <svg className="absolute inset-0 w-16 h-16 -rotate-90">
+          <svg className="absolute inset-0 w-16 h-16">
             <circle cx="32" cy="32" r="21" fill="none" stroke="rgba(236, 72, 153, 0.15)" strokeWidth="5" />
-            <motion.circle
+          </svg>
+          <motion.svg
+            className="absolute inset-0 w-16 h-16"
+            animate={{ rotate: -360 }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: 'linear' }}
+          >
+            <circle
               cx="32" cy="32" r="21" fill="none" stroke="url(#pink-gradient)" strokeWidth="5" strokeLinecap="round"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: [0, 0.6, 0.6, 0] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.15 }}
+              strokeDasharray="99" strokeDashoffset="40"
             />
-          </svg>
+          </motion.svg>
+
           {/* Inner ring - Stand (amber) */}
-          <svg className="absolute inset-0 w-16 h-16 -rotate-90">
+          <svg className="absolute inset-0 w-16 h-16">
             <circle cx="32" cy="32" r="14" fill="none" stroke="rgba(251, 191, 36, 0.15)" strokeWidth="5" />
-            <motion.circle
-              cx="32" cy="32" r="14" fill="none" stroke="url(#amber-gradient)" strokeWidth="5" strokeLinecap="round"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: [0, 0.85, 0.85, 0] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
-            />
           </svg>
+          <motion.svg
+            className="absolute inset-0 w-16 h-16"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+          >
+            <circle
+              cx="32" cy="32" r="14" fill="none" stroke="url(#amber-gradient)" strokeWidth="5" strokeLinecap="round"
+              strokeDasharray="66" strokeDashoffset="22"
+            />
+          </motion.svg>
+
           {/* Gradient definitions */}
           <svg className="absolute w-0 h-0">
             <defs>
