@@ -263,9 +263,88 @@ function PeriodDropdownExtended({
   );
 }
 
-// Distance Trend Chart - Weekly or Monthly
+// Activity type colors
+const ACTIVITY_TYPE_COLORS = {
+  all: COLORS.cyan,
+  Run: COLORS.emerald,
+  Ride: COLORS.amber,
+  Swim: COLORS.pink,
+};
+
+// Activity Type Toggle Component
+function ActivityTypeToggle({
+  value,
+  onChange,
+  availableTypes,
+}: {
+  value: 'all' | 'Run' | 'Ride' | 'Swim';
+  onChange: (v: 'all' | 'Run' | 'Ride' | 'Swim') => void;
+  availableTypes: Set<string>;
+}) {
+  const options: { value: 'all' | 'Run' | 'Ride' | 'Swim'; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'Run', label: 'Run' },
+    { value: 'Ride', label: 'Ride' },
+    { value: 'Swim', label: 'Swim' },
+  ];
+
+  // Only show options that have activities (except 'all' which is always shown)
+  const visibleOptions = options.filter(
+    (opt) => opt.value === 'all' || availableTypes.has(opt.value)
+  );
+
+  return (
+    <div className="flex items-center gap-1 bg-slate-800/50 rounded-lg p-0.5">
+      {visibleOptions.map((option) => {
+        const isActive = value === option.value;
+        const color = ACTIVITY_TYPE_COLORS[option.value];
+
+        return (
+          <button
+            key={option.value}
+            onClick={() => onChange(option.value)}
+            className={`px-2 py-1 text-xs rounded-md transition-all duration-200 cursor-pointer ${
+              isActive
+                ? 'text-white'
+                : 'text-slate-500 hover:text-slate-300'
+            }`}
+            style={{
+              backgroundColor: isActive ? `${color}30` : 'transparent',
+              color: isActive ? color : undefined,
+            }}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Distance Trend Chart - Weekly or Monthly with Activity Type Filter
 function DistanceTrendChart({ activities }: { activities: Activity[] }) {
   const [period, setPeriod] = useState<'weekly' | 'monthly'>('monthly');
+  const [activityType, setActivityType] = useState<'all' | 'Run' | 'Ride' | 'Swim'>('all');
+
+  // Get available activity types
+  const availableTypes = useMemo(() => {
+    const types = new Set<string>();
+    activities.forEach((a) => {
+      if (a.type === 'Run' || a.type === 'Ride' || a.type === 'Swim') {
+        types.add(a.type);
+      }
+    });
+    return types;
+  }, [activities]);
+
+  // Filter activities by type
+  const filteredActivities = useMemo(() => {
+    if (activityType === 'all') return activities;
+    return activities.filter((a) => a.type === activityType);
+  }, [activities, activityType]);
+
+  // Get the current line color based on activity type
+  const lineColor = ACTIVITY_TYPE_COLORS[activityType];
 
   const chartData = useMemo(() => {
     const now = new Date();
@@ -282,7 +361,7 @@ function DistanceTrendChart({ activities }: { activities: Activity[] }) {
       }
 
       // Aggregate activities
-      activities.forEach((activity) => {
+      filteredActivities.forEach((activity) => {
         const date = new Date(activity.startDate);
         const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         if (months[key]) {
@@ -305,7 +384,7 @@ function DistanceTrendChart({ activities }: { activities: Activity[] }) {
         const weekStart = new Date(weekEnd);
         weekStart.setDate(weekEnd.getDate() - 6);
 
-        const weekActivities = activities.filter((a) => {
+        const weekActivities = filteredActivities.filter((a) => {
           const date = new Date(a.startDate);
           return date >= weekStart && date <= weekEnd;
         });
@@ -321,13 +400,20 @@ function DistanceTrendChart({ activities }: { activities: Activity[] }) {
 
       return weeks;
     }
-  }, [activities, period]);
+  }, [filteredActivities, period]);
 
   return (
     <GlassCard theme="cyan" className="p-4 h-full border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-slate-300">Distance Trend</h3>
-        <PeriodDropdown value={period} onChange={setPeriod} theme="cyan" />
+        <div className="flex items-center gap-2">
+          <ActivityTypeToggle
+            value={activityType}
+            onChange={setActivityType}
+            availableTypes={availableTypes}
+          />
+          <PeriodDropdown value={period} onChange={setPeriod} theme="cyan" />
+        </div>
       </div>
       <div className="h-48">
         <ResponsiveContainer width="100%" height="100%">
@@ -354,10 +440,10 @@ function DistanceTrendChart({ activities }: { activities: Activity[] }) {
             <Line
               type="monotone"
               dataKey="distance"
-              stroke={COLORS.cyan}
+              stroke={lineColor}
               strokeWidth={2}
-              dot={{ fill: COLORS.cyan, strokeWidth: 0, r: 4 }}
-              activeDot={{ r: 6, fill: COLORS.cyan }}
+              dot={{ fill: lineColor, strokeWidth: 0, r: 4 }}
+              activeDot={{ r: 6, fill: lineColor }}
             />
           </LineChart>
         </ResponsiveContainer>
