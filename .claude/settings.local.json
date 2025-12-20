@@ -27,7 +27,9 @@
       "Bash(git commit:*)",
       "Bash(git add:*)",
       "Bash(git push:*)",
-      "WebFetch(domain:developers.strava.com)"
+      "WebFetch(domain:developers.strava.com)",
+      "Bash(git -C C:/Users/kimju/Documents/couchproof diff src/app/api/strava/sync/route.ts)",
+      "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"$\\(cat <<''EOF''\nFetch detailed activity data to get calories during Strava sync\n\nThe list activities endpoint doesn''t include calories - only the detailed\nactivity endpoint does. Now fetching detailed data for each activity during\nsync to properly capture calories for the \"Pizzas Burned\" fun stat.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

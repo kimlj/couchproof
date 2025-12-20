@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { getValidToken } from '@/lib/strava/tokens';
-import { getActivities, getActivityStreams } from '@/lib/strava/api';
+import { getActivities, getActivity, getActivityStreams } from '@/lib/strava/api';
 
 interface SyncResult {
   synced: number;
@@ -79,12 +79,15 @@ export async function POST(request: NextRequest) {
       }
 
       // Process each activity
-      for (const activity of activities) {
+      for (const activitySummary of activities) {
         try {
+          // Fetch detailed activity data (includes calories, kilojoules, etc.)
+          const activity = await getActivity(accessToken, activitySummary.id).catch(() => activitySummary);
+
           // Fetch streams for this activity
           const streams = await getActivityStreams(
             accessToken,
-            activity.id
+            activitySummary.id
           ).catch(() => null);
 
           // Check if activity already exists
@@ -212,7 +215,7 @@ export async function POST(request: NextRequest) {
             result.lastActivityDate = activity.start_date;
           }
         } catch (error) {
-          console.error(`Error syncing activity ${activity.id}:`, error);
+          console.error(`Error syncing activity ${activitySummary.id}:`, error);
           result.errors++;
         }
       }

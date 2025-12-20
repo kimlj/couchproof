@@ -19,6 +19,7 @@ interface FunStat {
   value: string;
   description: string;
   theme: 'orange' | 'emerald' | 'cyan' | 'purple' | 'pink' | 'amber';
+  bgEmoji: string;
 }
 
 export function QuickStats(props: QuickStatsProps) {
@@ -37,6 +38,7 @@ export function QuickStats(props: QuickStatsProps) {
           value: marathons.toFixed(1),
           description: `You've run ${marathons.toFixed(1)} marathon distances!`,
           theme: 'orange',
+          bgEmoji: '🏃',
         });
       }
 
@@ -49,6 +51,7 @@ export function QuickStats(props: QuickStatsProps) {
           value: `${worldPercent.toFixed(2)}%`,
           description: `${worldPercent.toFixed(2)}% of Earth's circumference`,
           theme: 'cyan',
+          bgEmoji: '🌍',
         });
       }
     }
@@ -62,6 +65,7 @@ export function QuickStats(props: QuickStatsProps) {
         value: everests.toFixed(2),
         description: `${Math.round(totalElevation).toLocaleString()}m total elevation`,
         theme: 'emerald',
+        bgEmoji: '🏔️',
       });
     }
 
@@ -73,11 +77,24 @@ export function QuickStats(props: QuickStatsProps) {
         label: 'Pizzas Burned',
         value: pizzas.toFixed(1),
         description: `${Math.round(totalCalories).toLocaleString()} total calories`,
-        theme: 'orange',
+        theme: 'pink',
+        bgEmoji: '🍕',
       });
     }
 
-    // Time - Days spent moving
+    // Streak - prioritize over Active Time
+    if (longestStreak > 0) {
+      stats.push({
+        icon: Zap,
+        label: 'Longest Streak',
+        value: `${longestStreak} days`,
+        description: 'Your best consistency run',
+        theme: 'amber',
+        bgEmoji: '🔥',
+      });
+    }
+
+    // Time - Days spent moving (lower priority, may get cut off)
     if (totalTime > 0) {
       const days = totalTime / 86400;
       const hours = totalTime / 3600;
@@ -87,17 +104,7 @@ export function QuickStats(props: QuickStatsProps) {
         value: days >= 1 ? `${days.toFixed(1)} days` : `${hours.toFixed(0)}h`,
         description: `${Math.round(hours)} hours of pure effort`,
         theme: 'purple',
-      });
-    }
-
-    // Streak
-    if (longestStreak > 0) {
-      stats.push({
-        icon: Zap,
-        label: 'Longest Streak',
-        value: `${longestStreak} days`,
-        description: 'Your best consistency run',
-        theme: 'amber',
+        bgEmoji: '⏱️',
       });
     }
 
@@ -113,8 +120,12 @@ export function QuickStats(props: QuickStatsProps) {
       {funStats.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <GlassCard key={index} theme={stat.theme} className="p-3">
-            <div className="flex items-start gap-2">
+          <GlassCard key={index} theme={stat.theme} className="p-3 relative overflow-hidden">
+            {/* Background emoji */}
+            <div className="absolute -right-2 -bottom-2 text-6xl opacity-[0.15] pointer-events-none select-none">
+              {stat.bgEmoji}
+            </div>
+            <div className="flex items-start gap-2 relative z-10">
               <GlassIcon theme={stat.theme} className="p-1.5 flex-shrink-0">
                 <Icon className="w-3.5 h-3.5" />
               </GlassIcon>
