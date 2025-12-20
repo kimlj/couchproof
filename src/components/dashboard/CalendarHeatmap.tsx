@@ -144,6 +144,14 @@ function formatDuration(seconds: number): string {
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+// Get local date string (YYYY-MM-DD) without timezone issues
+function getLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function CalendarHeatmap({ activities, onDayClick, onActivityClick, className }: CalendarHeatmapProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -152,7 +160,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick, class
     const activityMap = new Map<string, ActivityDay>();
 
     activities.forEach((activity) => {
-      const date = new Date(activity.startDate).toISOString().split('T')[0];
+      const date = getLocalDateString(new Date(activity.startDate));
       const existing = activityMap.get(date);
       if (existing) {
         existing.count += 1;
@@ -192,14 +200,14 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick, class
     const checkDate = new Date(today);
 
     while (true) {
-      const dateStr = checkDate.toISOString().split('T')[0];
+      const dateStr = getLocalDateString(checkDate);
       if (activityMap.has(dateStr)) {
         currentStreak++;
         checkDate.setDate(checkDate.getDate() - 1);
       } else if (currentStreak === 0) {
         // Check yesterday if today has no activity
         checkDate.setDate(checkDate.getDate() - 1);
-        const yesterdayStr = checkDate.toISOString().split('T')[0];
+        const yesterdayStr = getLocalDateString(checkDate);
         if (activityMap.has(yesterdayStr)) {
           currentStreak++;
           checkDate.setDate(checkDate.getDate() - 1);
@@ -226,7 +234,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick, class
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = startDayOfWeek - 1; i >= 0; i--) {
       const day = prevMonthLastDay - i;
-      const date = new Date(year, month - 1, day).toISOString().split('T')[0];
+      const date = getLocalDateString(new Date(year, month - 1, day));
       calendarDays.push({
         date,
         day,
@@ -238,11 +246,11 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick, class
     }
 
     // Current month days
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalDateString(new Date());
     for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day).toISOString().split('T')[0];
+      const date = getLocalDateString(new Date(year, month, day));
       const isToday = date === todayStr;
-      const isFuture = new Date(date) > new Date();
+      const isFuture = date > todayStr;
       calendarDays.push({
         date,
         day,
@@ -256,7 +264,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick, class
     // Next month days to fill the grid
     const remainingDays = 42 - calendarDays.length; // 6 rows * 7 days
     for (let day = 1; day <= remainingDays; day++) {
-      const date = new Date(year, month + 1, day).toISOString().split('T')[0];
+      const date = getLocalDateString(new Date(year, month + 1, day));
       calendarDays.push({
         date,
         day,
@@ -276,7 +284,7 @@ export function CalendarHeatmap({ activities, onDayClick, onActivityClick, class
     const monthStats = {
       activities: monthActivities.length,
       distance: monthActivities.reduce((sum, a) => sum + a.distance, 0),
-      activeDays: new Set(monthActivities.map((a) => new Date(a.startDate).toISOString().split('T')[0])).size,
+      activeDays: new Set(monthActivities.map((a) => getLocalDateString(new Date(a.startDate)))).size,
     };
 
     return { calendarDays, activityMap, monthStats, currentStreak };
