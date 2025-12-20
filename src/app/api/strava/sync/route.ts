@@ -15,7 +15,6 @@ interface SyncResult {
   skipped: number;
   errors: number;
   lastActivityDate?: string;
-  rateLimited?: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -93,13 +92,6 @@ export async function POST(request: NextRequest) {
 
       // Process each activity
       for (const activitySummary of activities) {
-        // Check batch limit
-        if (batchLimit > 0 && processedCount >= batchLimit) {
-          result.rateLimited = true;
-          hasMore = false;
-          break;
-        }
-
         try {
           // Check if activity already exists and has detailed data
           const existing = await prisma.activity.findUnique({
@@ -277,13 +269,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Only update last sync time if not doing a batched full sync (to allow continuation)
-    if (!fullSync || !result.rateLimited) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { lastStravaSync: new Date() },
-      });
-    }
+    // Update last sync time
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastStravaSync: new Date() },
+    });
 
     return NextResponse.json({
       success: true,
