@@ -210,7 +210,7 @@ function DashboardLayoutInner({
       />
 
       {/* Main Content - show skeleton while auth loading, children when ready */}
-      <main className="lg:ml-64 pt-16 lg:pt-0 pb-16 lg:pb-0 min-h-screen">
+      <main className="lg:ml-64 pt-16 lg:pt-0 pb-16 lg:pb-0 min-h-screen bg-slate-950">
         {isAuthLoading || !isAuthenticated ? (
           <PageContainer>
             <DashboardSkeleton />

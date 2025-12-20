@@ -39,7 +39,9 @@
       "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"$\\(cat <<''EOF''\nFull sync starts from oldest activity in database\n\n- Checks DB for oldest activity date\n- Only fetches activities BEFORE that date from Strava\n- Avoids re-fetching already synced activities\n- Much more efficient for incremental syncing\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"Fix full sync - fetch all from Jan 1, skip already synced\")",
       "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"Fix batchLimit reference error - remove unused batch logic\")",
-      "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"Change Pizzas Burned to Pizza Slices \\(285 cal per slice\\)\")"
+      "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"Change Pizzas Burned to Pizza Slices \\(285 cal per slice\\)\")",
+      "Bash(git -C C:/Users/kimju/Documents/couchproof diff --stat)",
+      "Bash(git restore:*)"
     ]
   }
 }

@@ -35,7 +35,7 @@ function PageContainerComponent({
       // Bottom padding for mobile bottom nav
       'pb-20 lg:pb-0',
       // Background
-      'bg-slate-900',
+      'bg-slate-950',
       className
     )}>
       <div className={clsx(

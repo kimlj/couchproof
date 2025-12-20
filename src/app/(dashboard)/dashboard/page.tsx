@@ -352,13 +352,35 @@ export default function DashboardPage() {
 
   return (
     <PageContainer>
-      {/* Header - Sync Button Only */}
+      {/* Header - Overview title + Profile + Sync Button */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex justify-end mb-3"
+        className="flex items-center justify-between mb-3"
       >
-        <SyncButton lastSyncTime={lastSyncTime} />
+        <h1 className="text-xl font-semibold text-white">Overview</h1>
+        <div className="flex items-center gap-4">
+          <SyncButton lastSyncTime={lastSyncTime} />
+          {/* User Profile */}
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.firstName || 'User'}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-white text-xs font-medium">
+                  {(user?.firstName || user?.name || 'U').charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <span className="text-sm text-slate-300 hidden sm:block">
+              {user?.firstName || user?.name?.split(' ')[0] || 'User'}
+            </span>
+          </div>
+        </div>
       </motion.div>
 
       {/* Row 1: Performance Charts */}

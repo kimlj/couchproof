@@ -324,7 +324,7 @@ function DistanceTrendChart({ activities }: { activities: Activity[] }) {
   }, [activities, period]);
 
   return (
-    <GlassCard theme="cyan" className="p-4 h-full">
+    <GlassCard theme="cyan" className="p-4 h-full border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-slate-300">Distance Trend</h3>
         <PeriodDropdown value={period} onChange={setPeriod} theme="cyan" />
@@ -400,7 +400,7 @@ function ActivityTypesChart({ activities }: { activities: Activity[] }) {
   const total = typeData.reduce((sum, t) => sum + t.value, 0);
 
   return (
-    <GlassCard theme="pink" className="p-4 h-full">
+    <GlassCard theme="pink" className="p-4 h-full border border-pink-500/30 shadow-[0_0_15px_rgba(236,72,153,0.1)]">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-slate-300">Activity Types</h3>
         <PeriodDropdownExtended value={period} onChange={setPeriod} theme="pink" />
@@ -485,7 +485,7 @@ function WeeklyStatsChart({ activities }: { activities: Activity[] }) {
   }, [activities]);
 
   return (
-    <GlassCard theme="amber" className="p-4 h-full">
+    <GlassCard theme="amber" className="p-4 h-full border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
       <h3 className="text-sm font-semibold text-slate-300 mb-3">Weekly Progress</h3>
       <div className="h-48">
         <ResponsiveContainer width="100%" height="100%">
