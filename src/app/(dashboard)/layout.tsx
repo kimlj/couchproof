@@ -25,6 +25,20 @@ export default function DashboardLayout({
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
+  // Prevent browser back/forward swipe gestures on dashboard
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      // If horizontal scroll is dominant, prevent browser navigation
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 10) {
+        e.preventDefault();
+      }
+    };
+
+    // Use passive: false to allow preventDefault
+    document.addEventListener('wheel', handleWheel, { passive: false });
+    return () => document.removeEventListener('wheel', handleWheel);
+  }, []);
+
   useEffect(() => {
     const fetchUser = async () => {
       try {
