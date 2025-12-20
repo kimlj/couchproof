@@ -33,7 +33,11 @@ export function SyncButton() {
 
         if (!res.ok) {
           const data = await res.json();
-          throw new Error(data.error || 'Sync failed');
+          // Check for rate limit
+          if (res.status === 429 || data.message?.includes('rate') || data.message?.includes('Rate')) {
+            throw new Error(`Rate limited. Wait 15 min. (${total} synced so far)`);
+          }
+          throw new Error(data.error || data.message || 'Sync failed');
         }
 
         const data: SyncStatus = await res.json();

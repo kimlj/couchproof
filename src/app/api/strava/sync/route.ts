@@ -54,8 +54,8 @@ export async function POST(request: NextRequest) {
     // Check sync options
     const searchParams = request.nextUrl.searchParams;
     const fullSync = searchParams.get('full') === 'true';
-    // Batch limit to avoid rate limits (default 30 for full sync, unlimited for regular)
-    const batchLimit = parseInt(searchParams.get('limit') || (fullSync ? '30' : '0'));
+    // Batch limit to avoid rate limits (default 20 for full sync to stay under 100 reads/15min)
+    const batchLimit = parseInt(searchParams.get('limit') || (fullSync ? '20' : '0'));
 
     // Calculate sync start time
     // Full sync: last 365 days, Regular sync: since last sync or last 30 days
