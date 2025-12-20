@@ -327,6 +327,10 @@ export function QuickStats(props: QuickStatsProps) {
     const threshold = 30;
     if (Math.abs(e.deltaX) < threshold) return;
 
+    // Prevent event from bubbling to sidebars/other components
+    e.preventDefault();
+    e.stopPropagation();
+
     setIsScrolling(true);
 
     if (e.deltaX > 0) {
