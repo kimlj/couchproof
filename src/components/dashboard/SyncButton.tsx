@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RefreshCw, Check, AlertCircle } from 'lucide-react';
 
 interface SyncStatus {
@@ -10,13 +10,30 @@ interface SyncStatus {
   processed: number;
   hasMore: boolean;
   message: string;
+  resumeFrom?: number;
 }
+
+const RESUME_KEY = 'strava_sync_resume';
 
 export function SyncButton() {
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [totalProcessed, setTotalProcessed] = useState(0);
+  const [resumeFrom, setResumeFrom] = useState<number | null>(null);
+
+  // Load resume position from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(RESUME_KEY);
+    if (saved) {
+      setResumeFrom(parseInt(saved));
+    }
+  }, []);
+
+  const clearResume = () => {
+    localStorage.removeItem(RESUME_KEY);
+    setResumeFrom(null);
+  };
 
   const runSync = async (fullSync = false) => {
     setSyncing(true);
@@ -25,10 +42,16 @@ export function SyncButton() {
 
     let hasMore = true;
     let total = 0;
+    let currentResumeFrom = resumeFrom;
 
     try {
       while (hasMore) {
-        const url = fullSync ? '/api/strava/sync?full=true' : '/api/strava/sync';
+        // Build URL with resume parameter if available
+        let url = fullSync ? '/api/strava/sync?full=true' : '/api/strava/sync';
+        if (fullSync && currentResumeFrom) {
+          url += `&before=${currentResumeFrom}`;
+        }
+
         const res = await fetch(url, { method: 'POST' });
 
         if (!res.ok) {
@@ -46,11 +69,21 @@ export function SyncButton() {
         setTotalProcessed(total);
         hasMore = data.hasMore;
 
+        // Track resume position
+        if (data.resumeFrom) {
+          currentResumeFrom = data.resumeFrom;
+          localStorage.setItem(RESUME_KEY, data.resumeFrom.toString());
+          setResumeFrom(data.resumeFrom);
+        }
+
         // Small delay between batches
         if (hasMore) {
           await new Promise((r) => setTimeout(r, 500));
         }
       }
+
+      // Sync complete - clear resume position
+      clearResume();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sync failed');
     } finally {
@@ -94,9 +127,9 @@ export function SyncButton() {
         onClick={() => runSync(true)}
         disabled={syncing}
         className="px-2 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-xs text-cyan-400 transition-colors disabled:opacity-50"
-        title="Full sync - fetches detailed data for all activities"
+        title={resumeFrom ? 'Resume full sync from last position' : 'Full sync - fetches detailed data for all activities'}
       >
-        {syncing ? 'Syncing...' : 'Full Sync'}
+        {syncing ? 'Syncing...' : resumeFrom ? 'Resume Sync' : 'Full Sync'}
       </button>
     </div>
   );

@@ -56,6 +56,9 @@ export async function POST(request: NextRequest) {
     const fullSync = searchParams.get('full') === 'true';
     // Batch limit to avoid rate limits (default 20 for full sync to stay under 100 reads/15min)
     const batchLimit = parseInt(searchParams.get('limit') || (fullSync ? '20' : '0'));
+    // Resume from a specific timestamp (for continuing after rate limit)
+    const beforeParam = searchParams.get('before');
+    const before = beforeParam ? parseInt(beforeParam) : undefined;
 
     // Calculate sync start time
     // Full sync: from January 1st of current year
@@ -75,6 +78,7 @@ export async function POST(request: NextRequest) {
     };
 
     let processedCount = 0;
+    let oldestTimestamp: number | undefined; // Track for resume functionality
 
     // Fetch activities from Strava (paginated)
     let page = 1;
@@ -84,6 +88,7 @@ export async function POST(request: NextRequest) {
     while (hasMore) {
       const activities = await getActivities(accessToken, {
         after,
+        before, // Resume from last position if provided
         page,
         per_page: perPage,
       });
@@ -255,9 +260,14 @@ export async function POST(request: NextRequest) {
             result.synced++;
           }
 
-          // Track last activity date
+          // Track last activity date (newest)
           if (!result.lastActivityDate || activity.start_date > result.lastActivityDate) {
             result.lastActivityDate = activity.start_date;
+          }
+          // Track oldest timestamp for resume functionality
+          const activityTimestamp = Math.floor(new Date(activity.start_date).getTime() / 1000);
+          if (!oldestTimestamp || activityTimestamp < oldestTimestamp) {
+            oldestTimestamp = activityTimestamp;
           }
         } catch (error) {
           console.error(`Error syncing activity ${activitySummary.id}:`, error);
@@ -298,6 +308,7 @@ export async function POST(request: NextRequest) {
       batchLimit: batchLimit || 'unlimited',
       hasMore: result.rateLimited || false,
       lastActivityDate: result.lastActivityDate,
+      resumeFrom: oldestTimestamp, // Use this as 'before' param to resume
       message: result.rateLimited
         ? `Processed ${processedCount} activities. Run again to continue.`
         : `Sync complete. ${result.synced} new, ${result.updated} updated, ${result.skipped} skipped.`,
