@@ -12,6 +12,7 @@ import { WeeklyRecap } from '@/components/dashboard/WeeklyRecap';
 import { DailyRoast } from '@/components/dashboard/DailyRoast';
 import { WeekComparison } from '@/components/dashboard/WeekComparison';
 import { QuickStats } from '@/components/dashboard/QuickStats';
+import { SyncButton } from '@/components/dashboard/SyncButton';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -345,12 +346,7 @@ export default function DashboardPage() {
               : "Evidence you're not a couch potato"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-xs text-emerald-400 font-medium">Active</span>
-          </div>
-        </div>
+        <SyncButton />
       </motion.div>
 
       {/* Row 1: Weekly Stats */}
