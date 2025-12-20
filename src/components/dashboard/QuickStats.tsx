@@ -69,13 +69,13 @@ export function QuickStats(props: QuickStatsProps) {
       });
     }
 
-    // Calories - Pizzas burned (roughly 2000 cal per pizza)
+    // Calories - Pizza slices burned (roughly 285 cal per slice)
     if (totalCalories > 0) {
-      const pizzas = totalCalories / 2000;
+      const slices = totalCalories / 285;
       stats.push({
         icon: Flame,
-        label: 'Pizzas Burned',
-        value: pizzas.toFixed(1),
+        label: 'Pizza Slices Burned',
+        value: Math.round(slices).toLocaleString(),
         description: `${Math.round(totalCalories).toLocaleString()} total calories`,
         theme: 'pink',
         bgEmoji: '🍕',
