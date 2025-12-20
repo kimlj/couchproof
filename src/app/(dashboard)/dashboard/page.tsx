@@ -109,7 +109,7 @@ export default function DashboardPage() {
     async function fetchData() {
       try {
         const [activitiesRes, statsRes, userRes] = await Promise.all([
-          fetch('/api/activities?limit=100'),
+          fetch('/api/activities?limit=1000'),
           fetch('/api/stats'),
           fetch('/api/me'),
         ]);
