@@ -58,9 +58,11 @@ export async function POST(request: NextRequest) {
     const batchLimit = parseInt(searchParams.get('limit') || (fullSync ? '20' : '0'));
 
     // Calculate sync start time
-    // Full sync: last 365 days, Regular sync: since last sync or last 30 days
+    // Full sync: from January 1st of current year
+    // Regular sync: since last sync or last 30 days
+    const startOfYear = new Date(new Date().getFullYear(), 0, 1); // Jan 1st of current year
     const after = fullSync
-      ? Math.floor((Date.now() - 365 * 24 * 60 * 60 * 1000) / 1000)
+      ? Math.floor(startOfYear.getTime() / 1000)
       : user.lastStravaSync
         ? Math.floor(user.lastStravaSync.getTime() / 1000)
         : Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
