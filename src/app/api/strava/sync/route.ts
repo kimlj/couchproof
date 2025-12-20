@@ -49,11 +49,17 @@ export async function POST(request: NextRequest) {
     // Get valid access token (will refresh if needed)
     const accessToken = await getValidToken(user.id);
 
+    // Check if full sync is requested (re-fetches all activities with detailed data)
+    const searchParams = request.nextUrl.searchParams;
+    const fullSync = searchParams.get('full') === 'true';
+
     // Calculate sync start time
-    // If lastSync exists, sync from that time. Otherwise, sync last 30 days
-    const after = user.lastStravaSync
-      ? Math.floor(user.lastStravaSync.getTime() / 1000)
-      : Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
+    // Full sync: last 365 days, Regular sync: since last sync or last 30 days
+    const after = fullSync
+      ? Math.floor((Date.now() - 365 * 24 * 60 * 60 * 1000) / 1000)
+      : user.lastStravaSync
+        ? Math.floor(user.lastStravaSync.getTime() / 1000)
+        : Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
 
     const result: SyncResult = {
       synced: 0,
@@ -242,6 +248,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      fullSync,
       synced: result.synced,
       updated: result.updated,
       errors: result.errors,

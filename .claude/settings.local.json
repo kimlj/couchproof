@@ -29,7 +29,9 @@
       "Bash(git push:*)",
       "WebFetch(domain:developers.strava.com)",
       "Bash(git -C C:/Users/kimju/Documents/couchproof diff src/app/api/strava/sync/route.ts)",
-      "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"$\\(cat <<''EOF''\nFetch detailed activity data to get calories during Strava sync\n\nThe list activities endpoint doesn''t include calories - only the detailed\nactivity endpoint does. Now fetching detailed data for each activity during\nsync to properly capture calories for the \"Pizzas Burned\" fun stat.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"$\\(cat <<''EOF''\nFetch detailed activity data to get calories during Strava sync\n\nThe list activities endpoint doesn''t include calories - only the detailed\nactivity endpoint does. Now fetching detailed data for each activity during\nsync to properly capture calories for the \"Pizzas Burned\" fun stat.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C C:/Users/kimju/Documents/couchproof push)",
+      "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"$\\(cat <<''EOF''\nAdd full sync option to fetch calories for all activities\n\n- Renamed \"Calories Burned\" to \"Active Calorie Burn\" in weekly stats\n- Added ?full=true query parameter to sync endpoint for full re-sync\n- Full sync fetches last 365 days of activities with detailed data\n- This ensures all activities have calories data for the Pizzas Burned stat\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

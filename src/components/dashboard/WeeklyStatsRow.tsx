@@ -52,7 +52,7 @@ export function WeeklyStatsRow({
       highlight: true,
     },
     {
-      label: 'Calories Burned',
+      label: 'Active Calorie Burn',
       value: formatCalories(weeklyCalories),
       unit: 'kcal',
       icon: Flame,
