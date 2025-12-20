@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import PageContainer from '@/components/layout/PageContainer';
 import { ActivityDetailModal } from '@/components/activities/ActivityDetailModal';
 import { WeeklyStatsRow } from '@/components/dashboard/WeeklyStatsRow';
@@ -13,9 +13,10 @@ import { DailyRoast } from '@/components/dashboard/DailyRoast';
 import { WeekComparison } from '@/components/dashboard/WeekComparison';
 import { QuickStats } from '@/components/dashboard/QuickStats';
 import { SyncButton } from '@/components/dashboard/SyncButton';
+import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { GlassCard } from '@/components/ui/glass-card';
-import { Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
 type ActivityData = {
   id: string;
@@ -99,48 +100,17 @@ type StatsData = {
 };
 
 export default function DashboardPage() {
-  const [activities, setActivities] = useState<ActivityData[]>([]);
-  const [stats, setStats] = useState<StatsData | null>(null);
-  const [user, setUser] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    activities: rawActivities,
+    stats,
+    user,
+    isLoading,
+  } = useDashboardData();
+
+  // Cast activities to the expected type
+  const activities = rawActivities as ActivityData[];
   const [selectedActivity, setSelectedActivity] = useState<ActivityData | null>(null);
-  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const [activitiesRes, statsRes, userRes] = await Promise.all([
-          fetch('/api/activities?limit=1000'),
-          fetch('/api/stats'),
-          fetch('/api/me'),
-        ]);
-
-        if (activitiesRes.ok) {
-          const activitiesData = await activitiesRes.json();
-          setActivities(activitiesData.activities || []);
-        }
-
-        if (statsRes.ok) {
-          const statsData = await statsRes.json();
-          setStats(statsData);
-        }
-
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          setUser(userData.user);
-          if (userData.user?.lastStravaSync) {
-            setLastSyncTime(userData.user.lastStravaSync);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, []);
+  const lastSyncTime = user?.lastStravaSync || null;
 
   // Calculate weekly stats from activities
   const weeklyStats = useMemo(() => {
@@ -360,12 +330,10 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <PageContainer>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
-        </div>
+        <DashboardSkeleton />
       </PageContainer>
     );
   }
