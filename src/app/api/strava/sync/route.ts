@@ -56,26 +56,14 @@ export async function POST(request: NextRequest) {
     const fullSync = searchParams.get('full') === 'true';
 
     // Calculate sync time range
-    const startOfYear = new Date(new Date().getFullYear(), 0, 1); // Jan 1st of current year
+    // Full sync: from January 1st of current year to now
+    // Regular sync: since last sync or last 30 days
+    const startOfYear = new Date(new Date().getFullYear(), 0, 1);
     const after = fullSync
       ? Math.floor(startOfYear.getTime() / 1000)
       : user.lastStravaSync
         ? Math.floor(user.lastStravaSync.getTime() / 1000)
         : Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
-
-    // For full sync, find the oldest activity to avoid re-fetching
-    let before: number | undefined;
-    if (fullSync) {
-      const oldestActivity = await prisma.activity.findFirst({
-        where: { userId: user.id },
-        orderBy: { startDate: 'asc' },
-        select: { startDate: true },
-      });
-      if (oldestActivity) {
-        // Start from oldest activity date (fetch activities before this)
-        before = Math.floor(oldestActivity.startDate.getTime() / 1000);
-      }
-    }
 
     const result: SyncResult = {
       synced: 0,
@@ -94,7 +82,6 @@ export async function POST(request: NextRequest) {
     while (hasMore) {
       const activities = await getActivities(accessToken, {
         after,
-        before, // Only fetch activities before oldest in DB
         page,
         per_page: perPage,
       });
