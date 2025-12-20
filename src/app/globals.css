@@ -122,6 +122,8 @@
   html,
   body {
     @apply bg-slate-900 text-foreground;
+    /* Disable browser back/forward swipe navigation */
+    overscroll-behavior-x: none;
   }
 }
 
