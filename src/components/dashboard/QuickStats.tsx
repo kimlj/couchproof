@@ -74,6 +74,7 @@ function getAnimalComparison(speedKmh: number): { animal: string; emoji: string 
 export function QuickStats(props: QuickStatsProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [isScrolling, setIsScrolling] = useState(false);
 
   const funStats = useMemo<FunStat[]>(() => {
     const stats: FunStat[] = [];
@@ -315,6 +316,29 @@ export function QuickStats(props: QuickStatsProps) {
     setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
   };
 
+  // Handle trackpad/mouse wheel horizontal scroll
+  const handleWheel = (e: React.WheelEvent) => {
+    if (totalSlides <= 1 || isScrolling) return;
+
+    // Detect horizontal scroll (trackpad two-finger swipe)
+    const isHorizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+    if (!isHorizontal) return;
+
+    const threshold = 30;
+    if (Math.abs(e.deltaX) < threshold) return;
+
+    setIsScrolling(true);
+
+    if (e.deltaX > 0) {
+      goNext();
+    } else {
+      goPrev();
+    }
+
+    // Debounce to prevent rapid scrolling
+    setTimeout(() => setIsScrolling(false), 300);
+  };
+
   const slideVariants = {
     enter: (direction: number) => ({
       x: direction > 0 ? 50 : -50,
@@ -331,7 +355,7 @@ export function QuickStats(props: QuickStatsProps) {
   };
 
   return (
-    <div className="relative group overflow-hidden">
+    <div className="relative group overflow-hidden" onWheel={handleWheel}>
       {/* Navigation arrows - subtle, show on hover */}
       {totalSlides > 1 && (
         <>
