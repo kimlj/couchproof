@@ -14,6 +14,7 @@ import { WeekComparison } from '@/components/dashboard/WeekComparison';
 import { QuickStats } from '@/components/dashboard/QuickStats';
 import { SyncButton } from '@/components/dashboard/SyncButton';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
+import { ChartsRow } from '@/components/dashboard/ChartsRow';
 import { GlassCard } from '@/components/ui/glass-card';
 import { motion } from 'framer-motion';
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -449,7 +450,20 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Row 3: Weekly Recap + Daily Roast + Week Comparison */}
+      {/* Row 3: Performance Charts */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="mb-6"
+      >
+        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+          Performance Insights
+        </h3>
+        <ChartsRow activities={activities} />
+      </motion.div>
+
+      {/* Row 4: Weekly Recap + Daily Roast + Week Comparison */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -481,7 +495,7 @@ export default function DashboardPage() {
         />
       </motion.div>
 
-      {/* Row 4: Fun Stats */}
+      {/* Row 5: Fun Stats */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -507,7 +521,7 @@ export default function DashboardPage() {
         />
       </motion.div>
 
-      {/* Row 5: Athlete Stats */}
+      {/* Row 6: Athlete Stats */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
