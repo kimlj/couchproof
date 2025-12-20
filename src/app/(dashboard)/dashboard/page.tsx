@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import PageContainer from '@/components/layout/PageContainer';
 import { ActivityDetailModal } from '@/components/activities/ActivityDetailModal';
 import { WeeklyStatsRow } from '@/components/dashboard/WeeklyStatsRow';
@@ -17,6 +17,7 @@ import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { GlassCard } from '@/components/ui/glass-card';
 import { motion } from 'framer-motion';
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { useLoading } from '@/contexts/LoadingContext';
 
 type ActivityData = {
   id: string;
@@ -106,6 +107,13 @@ export default function DashboardPage() {
     user,
     isLoading,
   } = useDashboardData();
+
+  const { setDataLoading } = useLoading();
+
+  // Signal to layout when data is loaded
+  useEffect(() => {
+    setDataLoading(isLoading);
+  }, [isLoading, setDataLoading]);
 
   // Cast activities to the expected type
   const activities = rawActivities as ActivityData[];

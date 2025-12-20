@@ -9,6 +9,7 @@ import PageContainer from '@/components/layout/PageContainer';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { signOut } from '@/lib/supabase/auth';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LoadingProvider, useLoading } from '@/contexts/LoadingContext';
 
 type User = {
   name: string;
@@ -90,7 +91,7 @@ function LoadingOverlay() {
   );
 }
 
-export default function DashboardLayout({
+function DashboardLayoutInner({
   children,
 }: {
   children: React.ReactNode;
@@ -98,8 +99,12 @@ export default function DashboardLayout({
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  const { isDataLoading } = useLoading();
+
+  // Show loading overlay while auth OR data is still loading
+  const isLoading = isAuthLoading || isDataLoading;
 
   // Prevent browser back/forward swipe gestures on dashboard
   useEffect(() => {
@@ -141,7 +146,7 @@ export default function DashboardLayout({
         console.error('Auth check failed:', error);
         router.push('/login');
       } finally {
-        setIsLoading(false);
+        setIsAuthLoading(false);
       }
     };
 
@@ -189,9 +194,9 @@ export default function DashboardLayout({
         isMobileMenuOpen={isMobileMenuOpen}
       />
 
-      {/* Main Content - show skeleton while loading, children when ready */}
+      {/* Main Content - show skeleton while auth loading, children when ready */}
       <main className="lg:ml-64 pt-16 lg:pt-0 pb-16 lg:pb-0 min-h-screen">
-        {isLoading || !isAuthenticated ? (
+        {isAuthLoading || !isAuthenticated ? (
           <PageContainer>
             <DashboardSkeleton />
           </PageContainer>
@@ -203,5 +208,18 @@ export default function DashboardLayout({
       {/* Mobile Bottom Navigation */}
       <BottomNav />
     </div>
+  );
+}
+
+// Wrap with LoadingProvider
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <LoadingProvider>
+      <DashboardLayoutInner>{children}</DashboardLayoutInner>
+    </LoadingProvider>
   );
 }
