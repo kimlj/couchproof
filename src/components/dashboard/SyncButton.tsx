@@ -1,89 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { RefreshCw, Check, AlertCircle } from 'lucide-react';
-
-interface SyncStatus {
-  synced: number;
-  updated: number;
-  skipped: number;
-  processed: number;
-  hasMore: boolean;
-  message: string;
-  resumeFrom?: number;
-}
-
-const RESUME_KEY = 'strava_sync_resume';
 
 export function SyncButton() {
   const [syncing, setSyncing] = useState(false);
-  const [status, setStatus] = useState<SyncStatus | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [totalProcessed, setTotalProcessed] = useState(0);
-  const [resumeFrom, setResumeFrom] = useState<number | null>(null);
-
-  // Load resume position from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem(RESUME_KEY);
-    if (saved) {
-      setResumeFrom(parseInt(saved));
-    }
-  }, []);
-
-  const clearResume = () => {
-    localStorage.removeItem(RESUME_KEY);
-    setResumeFrom(null);
-  };
 
   const runSync = async (fullSync = false) => {
     setSyncing(true);
     setError(null);
-    setTotalProcessed(0);
-
-    let hasMore = true;
-    let total = 0;
-    let currentResumeFrom = resumeFrom;
+    setStatus(null);
 
     try {
-      while (hasMore) {
-        // Build URL with resume parameter if available
-        let url = fullSync ? '/api/strava/sync?full=true' : '/api/strava/sync';
-        if (fullSync && currentResumeFrom) {
-          url += `&before=${currentResumeFrom}`;
-        }
+      const url = fullSync ? '/api/strava/sync?full=true' : '/api/strava/sync';
+      const res = await fetch(url, { method: 'POST' });
+      const data = await res.json();
 
-        const res = await fetch(url, { method: 'POST' });
-
-        if (!res.ok) {
-          const data = await res.json();
-          // Check for rate limit
-          if (res.status === 429 || data.message?.includes('rate') || data.message?.includes('Rate')) {
-            throw new Error(`Rate limited. Wait 15 min. (${total} synced so far)`);
-          }
-          throw new Error(data.error || data.message || 'Sync failed');
-        }
-
-        const data: SyncStatus = await res.json();
-        setStatus(data);
-        total += data.processed;
-        setTotalProcessed(total);
-        hasMore = data.hasMore;
-
-        // Track resume position
-        if (data.resumeFrom) {
-          currentResumeFrom = data.resumeFrom;
-          localStorage.setItem(RESUME_KEY, data.resumeFrom.toString());
-          setResumeFrom(data.resumeFrom);
-        }
-
-        // Small delay between batches
-        if (hasMore) {
-          await new Promise((r) => setTimeout(r, 500));
-        }
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Sync failed');
       }
 
-      // Sync complete - clear resume position
-      clearResume();
+      setStatus(`${data.synced} new, ${data.updated} updated, ${data.skipped} skipped`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sync failed');
     } finally {
@@ -96,13 +35,13 @@ export function SyncButton() {
       {/* Status indicator */}
       {syncing && (
         <span className="text-xs text-cyan-400 animate-pulse">
-          Syncing... {totalProcessed > 0 && `(${totalProcessed} processed)`}
+          Syncing...
         </span>
       )}
       {!syncing && status && !error && (
         <span className="text-xs text-emerald-400 flex items-center gap-1">
           <Check className="w-3 h-3" />
-          Synced
+          {status}
         </span>
       )}
       {error && (
@@ -127,9 +66,9 @@ export function SyncButton() {
         onClick={() => runSync(true)}
         disabled={syncing}
         className="px-2 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-xs text-cyan-400 transition-colors disabled:opacity-50"
-        title={resumeFrom ? 'Resume full sync from last position' : 'Full sync - fetches detailed data for all activities'}
+        title="Full sync - fetches detailed data for all activities from Jan 1st"
       >
-        {syncing ? 'Syncing...' : resumeFrom ? 'Resume Sync' : 'Full Sync'}
+        {syncing ? 'Syncing...' : 'Full Sync'}
       </button>
     </div>
   );

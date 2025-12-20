@@ -54,21 +54,28 @@ export async function POST(request: NextRequest) {
     // Check sync options
     const searchParams = request.nextUrl.searchParams;
     const fullSync = searchParams.get('full') === 'true';
-    // Batch limit to avoid rate limits (default 20 for full sync to stay under 100 reads/15min)
-    const batchLimit = parseInt(searchParams.get('limit') || (fullSync ? '20' : '0'));
-    // Resume from a specific timestamp (for continuing after rate limit)
-    const beforeParam = searchParams.get('before');
-    const before = beforeParam ? parseInt(beforeParam) : undefined;
 
-    // Calculate sync start time
-    // Full sync: from January 1st of current year
-    // Regular sync: since last sync or last 30 days
+    // Calculate sync time range
     const startOfYear = new Date(new Date().getFullYear(), 0, 1); // Jan 1st of current year
     const after = fullSync
       ? Math.floor(startOfYear.getTime() / 1000)
       : user.lastStravaSync
         ? Math.floor(user.lastStravaSync.getTime() / 1000)
         : Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
+
+    // For full sync, find the oldest activity to avoid re-fetching
+    let before: number | undefined;
+    if (fullSync) {
+      const oldestActivity = await prisma.activity.findFirst({
+        where: { userId: user.id },
+        orderBy: { startDate: 'asc' },
+        select: { startDate: true },
+      });
+      if (oldestActivity) {
+        // Start from oldest activity date (fetch activities before this)
+        before = Math.floor(oldestActivity.startDate.getTime() / 1000);
+      }
+    }
 
     const result: SyncResult = {
       synced: 0,
@@ -78,7 +85,6 @@ export async function POST(request: NextRequest) {
     };
 
     let processedCount = 0;
-    let oldestTimestamp: number | undefined; // Track for resume functionality
 
     // Fetch activities from Strava (paginated)
     let page = 1;
@@ -88,7 +94,7 @@ export async function POST(request: NextRequest) {
     while (hasMore) {
       const activities = await getActivities(accessToken, {
         after,
-        before, // Resume from last position if provided
+        before, // Only fetch activities before oldest in DB
         page,
         per_page: perPage,
       });
@@ -264,11 +270,6 @@ export async function POST(request: NextRequest) {
           if (!result.lastActivityDate || activity.start_date > result.lastActivityDate) {
             result.lastActivityDate = activity.start_date;
           }
-          // Track oldest timestamp for resume functionality
-          const activityTimestamp = Math.floor(new Date(activity.start_date).getTime() / 1000);
-          if (!oldestTimestamp || activityTimestamp < oldestTimestamp) {
-            oldestTimestamp = activityTimestamp;
-          }
         } catch (error) {
           console.error(`Error syncing activity ${activitySummary.id}:`, error);
           result.errors++;
@@ -305,13 +306,8 @@ export async function POST(request: NextRequest) {
       skipped: result.skipped,
       errors: result.errors,
       processed: processedCount,
-      batchLimit: batchLimit || 'unlimited',
-      hasMore: result.rateLimited || false,
       lastActivityDate: result.lastActivityDate,
-      resumeFrom: oldestTimestamp, // Use this as 'before' param to resume
-      message: result.rateLimited
-        ? `Processed ${processedCount} activities. Run again to continue.`
-        : `Sync complete. ${result.synced} new, ${result.updated} updated, ${result.skipped} skipped.`,
+      message: `Sync complete. ${result.synced} new, ${result.updated} updated, ${result.skipped} skipped.`,
     });
   } catch (error) {
     console.error('Sync error:', error);

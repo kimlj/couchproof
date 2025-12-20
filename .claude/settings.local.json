@@ -35,7 +35,8 @@
       "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"$\\(cat <<''EOF''\nOptimize Strava sync to avoid rate limits\n\n- Skip API calls if activity already has calories and streams\n- Default batch limit of 30 activities for full sync\n- Add 200ms delay between API calls\n- Return detailed sync status \\(skipped, hasMore, processed count\\)\n- Don''t update lastStravaSync during partial batches \\(allows continuation\\)\n- Run full sync multiple times to process all activities gradually\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"$\\(cat <<''EOF''\nAdd sync button to dashboard header\n\n- Added SyncButton component with auto-continue for full sync\n- Shows progress while syncing\n- Regular sync button + Full Sync button\n- Removed Active badge from header\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"Fetch up to 1000 activities for complete fun facts stats\")",
-      "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"Full sync now fetches from Jan 1st of current year\")"
+      "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"Full sync now fetches from Jan 1st of current year\")",
+      "Bash(git -C C:/Users/kimju/Documents/couchproof commit -m \"$\\(cat <<''EOF''\nFull sync starts from oldest activity in database\n\n- Checks DB for oldest activity date\n- Only fetches activities BEFORE that date from Strava\n- Avoids re-fetching already synced activities\n- Much more efficient for incremental syncing\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
